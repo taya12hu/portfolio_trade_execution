@@ -70,7 +70,7 @@ and covered by contract tests. We don't add a broker just to say five are suppor
 - [x] `Dockerfile` (3.12-slim, non-root, healthcheck, 1 worker) + `docker-compose.yml` (api + postgres 16)
 - [x] `scripts/demo.sh` — curl walkthrough of the PLAN Step 17 demo; **passes against a local server** (SQLite)
 - [x] `README.md` per PLAN Step 18, including the "simulator vs live" disclaimer
-- [ ] Verify `docker compose up` + `demo.sh` on a machine with Docker (Docker is not installed on the dev machine)
+- [x] Verified: `docker compose up --build` → both containers healthy; `demo.sh` passes against the containerised API + Postgres 16
 
 ## Phase 8 — Real broker adapters (one at a time, each checked against docs)
 Each one: payload/endpoint check against current docs → adapter + mappers → respx contract tests.
@@ -90,7 +90,7 @@ Live order placement stays blocked unless `LIVE_TRADING_ENABLED=true`.
 ## Phase 9 — SHOULD
 - [ ] Alembic migrations (replace `create_all`)
 - [x] GitHub Actions: pytest on SQLite, engine/API tests on Postgres 16, docker build (`.github/workflows/ci.yml`)
-- [~] Postgres-backed test run — wired via `TEST_DATABASE_URL`; runs in CI, not run locally (no Postgres/Docker here)
+- [x] Postgres-backed test run — engine + API tests pass on Postgres 16 (3 consecutive runs); `TEST_DATABASE_URL` in env or `.env` (e.g. a Supabase test project)
 
 ## Phase 10 — NICE TO HAVE
 - [x] Single-file HTML UI at `/ui` (connect → paste/upload CSV → preview → execute → live results, idempotent re-click); checked in a browser
@@ -124,3 +124,5 @@ Implementation choices that refine or deviate from the plan.
 | 2026-10-01 | No `scripconsent` sent to AngelOne | Consenting to trade surveillance-list stocks is the user's decision, not the engine's. |
 | 2026-10-01 | Fyers order-book tag compared after the last `:` | Defensive against a `"<n>:<tag>"` echo format; unverified, flagged in the adapter docstring. |
 | 2026-10-01 | Instrument map regenerated from official masters | It caught a wrong hand-curated ISIN (KOTAKBANK `INE237A01028` → `INE237A01036`, changed by a stock split). Confirms the rule: never trust hand-written identifiers for live orders. |
+| 2026-10-01 | Found + fixed via the Postgres run: mock `expire_session_after_orders` expired the session after *every* later order (`>=` instead of `==`) | SQLite serialises writes and hid it; Postgres's real concurrency exposed it. The gateway behaved correctly (one refresh per call, then stop). |
+| 2026-10-01 | Tests ignore the developer's `.env` (`_env_file=None`), except `TEST_DATABASE_URL` | Filling in real broker keys locally must not change test outcomes. |
