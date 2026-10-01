@@ -52,23 +52,36 @@ def settings(tmp_path) -> Settings:
     )
 
 
-async def _reset_shared_database(url: str) -> None:
-    """A shared (Postgres) test database must start empty, or startup recovery would pick up
-    executions left RUNNING by a previous test."""
-    from app.db.models import Base
-    from app.db.session import create_engine
+_shared_schema_ready = False
 
-    engine = create_engine(url)
+
+async def _reset_shared_database(engine) -> None:
+    """A shared (Postgres) test database must start each test empty, or startup recovery would
+    pick up executions left RUNNING by a previous test.
+
+    The schema is rebuilt once per test run (so it always matches the models); after that each test
+    only empties the tables with a single TRUNCATE, instead of dozens of DDL round trips."""
+    global _shared_schema_ready
+    from sqlalchemy import text
+
+    from app.db.models import Base
+
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
+        if not _shared_schema_ready:
+            await conn.run_sync(Base.metadata.drop_all)
+            await conn.run_sync(Base.metadata.create_all)
+            _shared_schema_ready = True
+        else:
+            tables = ", ".join(t.name for t in Base.metadata.sorted_tables)
+            await conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
 
 
 @pytest.fixture
 async def app(settings):
-    if not settings.database_url.startswith("sqlite"):
-        await _reset_shared_database(settings.database_url)
     app = create_app(settings)
+    if not settings.database_url.startswith("sqlite"):
+        # Uses the app's own engine, so the connection opened here is reused by the test.
+        await _reset_shared_database(app.state.container.engine)
     async with app.router.lifespan_context(app):
         container = app.state.container
         # Deliver webhooks to this same app (the dev sink) without a network.
