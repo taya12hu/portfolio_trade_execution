@@ -3,320 +3,806 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Trade Execution Console</title>
+<title>Portfolio Trader</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f6bff'/%3E%3Cpath d='M7 21l6-6 4 4 8-9' stroke='white' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5f6b7a; --border: #dde2e8;
-    --accent: #2457d6; --accent-text: #ffffff; --ok: #1a7f37; --warn: #9a6700; --bad: #c4314b; --info: #2457d6;
-    --chip: #eef1f5; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bg: #f4f6fa; --surface: #ffffff; --surface-2: #f7f9fc; --text: #131a26; --muted: #5c6878; --faint: #8a95a5;
+    --border: #e3e8ef; --accent: #2f6bff; --accent-soft: #e8efff; --accent-text: #ffffff;
+    --green: #128a4a; --green-soft: #e3f6ec; --red: #c9354d; --red-soft: #fdebee; --amber: #9a6a00; --amber-soft: #fff4d6;
+    --blue: #2f6bff; --blue-soft: #e8efff; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 4px 16px rgba(16,24,40,.06);
+    --radius: 14px;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #0f1216; --panel: #171b21; --text: #e6e9ee; --muted: #9aa5b4; --border: #2a313a;
-      --accent: #5b8cff; --accent-text: #0b0d10; --ok: #4ac26b; --warn: #d4a72c; --bad: #ff6b81; --info: #7aa2ff; --chip: #222831; }
+    :root {
+      --bg: #0d1117; --surface: #151b24; --surface-2: #1b2230; --text: #e7ecf3; --muted: #9aa6b6; --faint: #6f7b8c;
+      --border: #263040; --accent: #5b8cff; --accent-soft: #1d2a47; --accent-text: #0b0f17;
+      --green: #43c47e; --green-soft: #13301f; --red: #ff6f86; --red-soft: #3a1820; --amber: #e0b14a; --amber-soft: #352a10;
+      --blue: #7ea4ff; --blue-soft: #1d2a47; --shadow: none;
+    }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-  header { padding: 18px 16px 6px; max-width: 1100px; margin: 0 auto; }
-  header h1 { margin: 0; font-size: 20px; }
-  header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
-  main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 40px; display: grid; gap: 14px; }
-  section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-  h2 { margin: 0 0 10px; font-size: 15px; display: flex; gap: 8px; align-items: center; }
-  h2 .n { background: var(--chip); border-radius: 999px; width: 22px; height: 22px; display: inline-grid; place-items: center; font-size: 12px; }
-  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
-  input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); font: inherit; }
-  textarea { font-family: var(--mono); font-size: 13px; min-height: 92px; resize: vertical; }
-  .row { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
-  button { border: 1px solid var(--border); background: var(--chip); color: var(--text); padding: 8px 14px; border-radius: 7px; font: inherit; cursor: pointer; }
-  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-  button:disabled { opacity: .55; cursor: not-allowed; }
-  .muted { color: var(--muted); font-size: 13px; }
-  .mono { font-family: var(--mono); font-size: 12.5px; }
-  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
-  .seg button { border: 0; border-radius: 0; }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
-  .msg { margin-top: 10px; padding: 9px 11px; border-radius: 7px; border: 1px solid var(--border); font-size: 13px; white-space: pre-wrap; }
-  .msg.bad { border-color: var(--bad); color: var(--bad); }
-  .msg.ok { border-color: var(--ok); color: var(--ok); }
-  .table-wrap { overflow-x: auto; margin-top: 10px; }
-  table { border-collapse: collapse; width: 100%; font-size: 13px; }
-  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  th { color: var(--muted); font-weight: 600; font-size: 12px; }
-  td.reason { white-space: normal; min-width: 220px; color: var(--muted); }
-  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--chip); }
-  .s-FILLED, .s-COMPLETED, .s-SENT { color: var(--ok); }
-  .s-REJECTED, .s-FAILED, .s-CANCELLED { color: var(--bad); }
-  .s-UNKNOWN, .s-NEEDS_REVIEW, .s-PARTIALLY_FILLED, .s-PARTIALLY_COMPLETED, .s-SKIPPED { color: var(--warn); }
-  .s-RUNNING, .s-ACCEPTED, .s-SUBMITTING, .s-SUBMITTED, .s-RECONCILING, .s-OPEN, .s-PENDING { color: var(--info); }
-  .summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-  .summary span { background: var(--chip); border-radius: 7px; padding: 4px 9px; font-size: 12.5px; }
-  .hidden { display: none; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  code { font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 0 4px; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+
+  /* header */
+  header { background: var(--surface); border-bottom: 1px solid var(--border); }
+  header .wrap { display: flex; align-items: center; gap: 12px; padding-top: 14px; padding-bottom: 14px; }
+  .logo { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); display: grid; place-items: center; flex: none; }
+  .brand b { display: block; font-size: 17px; }
+  .brand span { color: var(--muted); font-size: 13px; }
+  .spacer { flex: 1; }
+  .icon-btn { border: 1px solid var(--border); background: var(--surface); border-radius: 10px; padding: 7px 11px; cursor: pointer; color: var(--muted); font-size: 13px; }
+  .icon-btn:hover { color: var(--text); }
+
+  /* stepper */
+  .steps { display: flex; gap: 8px; margin: 22px 0 14px; }
+  .step { flex: 1; display: flex; align-items: center; gap: 9px; color: var(--faint); font-size: 13.5px; font-weight: 600; min-width: 0; }
+  .step .dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--border); display: grid; place-items: center; font-size: 12.5px; flex: none; background: var(--surface); }
+  .step .bar { flex: 1; height: 2px; background: var(--border); border-radius: 2px; min-width: 8px; }
+  .step:last-child .bar { display: none; }
+  .step.active { color: var(--text); }
+  .step.active .dot { border-color: var(--accent); color: var(--accent); }
+  .step.done { color: var(--muted); }
+  .step.done .dot { border-color: var(--accent); background: var(--accent); color: var(--accent-text); }
+  .step.done .bar { background: var(--accent); }
+  @media (max-width: 560px) { .step .label { display: none; } .step.active .label { display: inline; } }
+
+  /* cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 4px; font-size: 18px; }
+  .card .sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+  .hidden { display: none !important; }
+
+  /* brokers */
+  .brokers { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .broker { border: 1.5px solid var(--border); border-radius: 12px; padding: 12px; background: var(--surface); cursor: pointer; text-align: left; display: flex; gap: 10px; align-items: center; transition: border-color .15s, background .15s; }
+  .broker:hover { border-color: var(--accent); }
+  .broker[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .broker .mark { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; flex: none; }
+  .broker b { display: block; font-size: 14px; }
+  .broker small { color: var(--muted); font-size: 12px; }
+  @media (max-width: 560px) { .broker { padding: 10px; gap: 8px; } .broker .mark { width: 30px; height: 30px; } .card { padding: 16px; } }
+
+  .connected { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 12px; background: var(--green-soft); }
+  .connected .tick { width: 30px; height: 30px; border-radius: 50%; background: var(--green); color: #fff; display: grid; place-items: center; flex: none; }
+  .connected b { display: block; }
+  .connected small { color: var(--muted); }
+
+  /* forms */
+  .field { margin-top: 14px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .field .hint { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+  input[type=text], input[type=number], input[type=password], select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .btn { border: 1px solid var(--border); background: var(--surface); padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; }
+  .btn:hover { background: var(--surface-2); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .btn.primary:hover { filter: brightness(1.05); }
+  .btn.big { padding: 12px 20px; font-size: 15px; }
+  .btn.link { border: 0; background: none; color: var(--accent); padding: 6px 4px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .row-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+
+  details.more { margin-top: 14px; border: 1px dashed var(--border); border-radius: 12px; padding: 10px 14px; }
+  details.more summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--muted); }
+  details.more[open] summary { margin-bottom: 6px; }
+  .check { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
+  .check input[type=checkbox] { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--accent); flex: none; }
+  .check span small { display: block; color: var(--muted); font-size: 12.5px; }
+  .inline-input { display: inline-block; width: 130px !important; padding: 5px 9px !important; margin-left: 6px; text-transform: uppercase; }
+
+  /* portfolio */
+  .portfolio { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+  .chip b { margin-right: 4px; }
+  .empty { color: var(--muted); font-size: 14px; }
+
+  /* trades editor */
+  .trades { display: grid; gap: 10px; }
+  .trade { display: grid; grid-template-columns: 132px 1fr 110px 36px; gap: 8px; align-items: center; }
+  @media (max-width: 560px) { .trade { grid-template-columns: 1fr 1fr 36px; } .trade .sym { grid-column: 1 / -1; order: -1; } }
+  .side { display: inline-flex; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; height: 40px; }
+  .side button { border: 0; background: var(--surface-2); padding: 0 14px; cursor: pointer; font-weight: 600; color: var(--muted); flex: 1; }
+  .side button.on.buy { background: var(--green); color: #fff; }
+  .side button.on.sell { background: var(--red); color: #fff; }
+  .x { border: 0; background: none; color: var(--faint); font-size: 20px; cursor: pointer; border-radius: 8px; height: 36px; }
+  .x:hover { color: var(--red); background: var(--red-soft); }
+  .trade .owned { grid-column: 2 / -1; font-size: 12px; color: var(--muted); margin-top: -4px; }
+  @media (max-width: 560px) { .trade .owned { grid-column: 1 / -1; } }
+
+  /* messages */
+  .msg { margin-top: 14px; padding: 12px 14px; border-radius: 12px; font-size: 14px; }
+  .msg.bad { background: var(--red-soft); color: var(--red); }
+  .msg.info { background: var(--blue-soft); color: var(--blue); }
+  .msg.ok { background: var(--green-soft); color: var(--green); }
+  .msg ul { margin: 6px 0 0; padding-left: 18px; color: var(--text); }
+
+  /* review */
+  .plan h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 14px 0 8px; }
+  .plan ol { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+  .plan li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+  .tag { font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px; letter-spacing: .03em; }
+  .tag.buy { background: var(--green-soft); color: var(--green); }
+  .tag.sell { background: var(--red-soft); color: var(--red); }
+  .why { color: var(--muted); font-size: 13px; margin-top: 12px; }
+
+  /* results */
+  .banner { display: flex; gap: 14px; align-items: center; padding: 16px; border-radius: 12px; }
+  .banner .big-icon { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; font-weight: 700; flex: none; }
+  .banner b { font-size: 17px; display: block; }
+  .banner small { color: var(--muted); }
+  .tone-ok { background: var(--green-soft); } .tone-ok .big-icon { background: var(--green); color: #fff; }
+  .tone-bad { background: var(--red-soft); } .tone-bad .big-icon { background: var(--red); color: #fff; }
+  .tone-warn { background: var(--amber-soft); } .tone-warn .big-icon { background: var(--amber); color: #fff; }
+  .tone-run { background: var(--blue-soft); } .tone-run .big-icon { background: var(--blue); color: #fff; }
+  .progress { height: 8px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--border); overflow: hidden; margin: 14px 0 4px; }
+  .progress div { height: 100%; background: var(--accent); width: 0; transition: width .4s; }
+  .results { display: grid; gap: 8px; margin-top: 14px; }
+  .result { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; }
+  .result .what { font-weight: 600; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .result .note { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+  .pill { font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; align-self: start; }
+  .p-ok { background: var(--green-soft); color: var(--green); }
+  .p-bad { background: var(--red-soft); color: var(--red); }
+  .p-warn { background: var(--amber-soft); color: var(--amber); }
+  .p-run { background: var(--blue-soft); color: var(--blue); }
+  .p-mute { background: var(--surface-2); color: var(--muted); }
+  .tech { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; color: var(--faint); grid-column: 1 / -1; overflow-wrap: anywhere; }
+  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; vertical-align: -2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .history { display: grid; gap: 6px; }
+  .history button { display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--border); background: var(--surface); padding: 10px 12px; border-radius: 10px; cursor: pointer; }
+  .history button:hover { border-color: var(--accent); }
+  .history small { color: var(--muted); white-space: nowrap; }
+
+  dialog { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 20px; width: min(440px, 92vw); }
+  dialog::backdrop { background: rgba(10, 14, 22, .45); }
+  footer { color: var(--faint); font-size: 12.5px; text-align: center; padding: 10px 16px 30px; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Trade Execution Console</h1>
-  <p>Connect a broker, enter a portfolio or rebalance, execute in one click. The <b>mock</b> broker is a simulator; real brokers place orders only when the server has <code>LIVE_TRADING_ENABLED=true</code>.</p>
+  <div class="wrap">
+    <div class="logo" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 32 32"><path d="M5 22l7-7 5 5 10-11" stroke="white" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div class="brand"><b>Portfolio Trader</b><span>Buy and sell many stocks in one go</span></div>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="settingsBtn" title="Settings">⚙ Settings</button>
+  </div>
 </header>
-<main>
-  <section>
-    <h2><span class="n">1</span>Connect broker</h2>
-    <div class="row">
-      <div><label for="apiKey">API key</label><input id="apiKey" value="dev-key" autocomplete="off"></div>
-      <div><label for="broker">Broker</label><select id="broker"></select></div>
-    </div>
-    <div id="mockFields">
-      <div class="row">
-        <div><label for="clientId">Client id</label><input id="clientId" value="DEMO1"></div>
-        <div><label for="holdings">Initial holdings (JSON, first connect only)</label><input id="holdings" class="mono" placeholder='{"INFY": 8}'></div>
+
+<main class="wrap">
+  <nav class="steps" aria-label="Progress">
+    <div class="step" data-step="1"><span class="dot">1</span><span class="label">Connect</span><span class="bar"></span></div>
+    <div class="step" data-step="2"><span class="dot">2</span><span class="label">Your trades</span><span class="bar"></span></div>
+    <div class="step" data-step="3"><span class="dot">3</span><span class="label">Review &amp; place</span><span class="bar"></span></div>
+  </nav>
+
+  <!-- STEP 1 -->
+  <section class="card" id="connectCard">
+    <h2>Connect your broker account</h2>
+    <p class="sub">Not sure? Start with the <b>Practice account</b> — it uses pretend money, so nothing real is bought or sold.</p>
+
+    <div id="connectedBox" class="hidden"></div>
+
+    <div id="chooser">
+      <div class="brokers" id="brokerList" role="group" aria-label="Brokers"></div>
+
+      <div id="practiceForm">
+        <details class="more">
+          <summary>Practice options (optional)</summary>
+          <p class="why" style="margin-top:0">Turn these on to see how the app handles real-world problems. Nothing here costs money.</p>
+          <label class="check"><input type="checkbox" id="optSlow"><span>Fill orders slowly<small>Watch each order move from "sent" to "done".</small></span></label>
+          <label class="check"><input type="checkbox" id="optBusy"><span>Broker is busy at first<small>The first two orders are turned away and retried automatically.</small></span></label>
+          <label class="check"><input type="checkbox" id="optReject"><span>Broker rejects <input type="text" id="optRejectSym" class="inline-input" value="HDFCBANK" aria-label="Stock to reject"><small>Shows how a rejection and its reason are reported.</small></span></label>
+          <label class="check"><input type="checkbox" id="optLost"><span>Broker's reply gets lost for <input type="text" id="optLostSym" class="inline-input" value="ITC" aria-label="Stock whose reply is lost"><small>The app checks with the broker instead of sending the order twice.</small></span></label>
+          <div class="row-actions" style="margin-top:6px">
+            <span class="empty" id="practiceIdText"></span>
+            <button class="btn link" id="freshAccount" type="button">Start a fresh practice account</button>
+          </div>
+        </details>
       </div>
-      <label for="scenario">Scenario (JSON) — e.g. {"symbols": {"HDFCBANK": "REJECTED", "ITC": "TIMEOUT_AFTER_PLACE"}, "rate_limit_first_n": 2}</label>
-      <textarea id="scenario">{"fill_delay_s": 0.5}</textarea>
+
+      <div id="credForm" class="hidden">
+        <div class="grid2" id="credFields" style="margin-top:14px"></div>
+        <p class="why">Your PIN and one-time code are used once to log in and are never stored.</p>
+      </div>
+
+      <div id="redirectNote" class="msg info hidden">You'll be taken to <b id="redirectName"></b> to log in. Come back here afterwards and press <b>I've logged in</b>.</div>
+
+      <div class="row-actions">
+        <button class="btn primary big" id="connectBtn">Connect</button>
+        <button class="btn hidden" id="checkLoginBtn">I've logged in</button>
+      </div>
     </div>
-    <div id="credFields" class="hidden">
-      <label for="creds">Credentials (JSON). AngelOne: {"client_code","pin","totp"}. Groww: {"api_key","totp"}. Used once, never stored.</label>
-      <textarea id="creds">{}</textarea>
-    </div>
-    <div class="actions">
-      <button class="primary" id="connectBtn">Connect</button>
-      <span class="muted" id="connInfo">Not connected</span>
-    </div>
-    <div id="holdingsView" class="muted mono"></div>
-    <div id="connMsg"></div>
+    <div id="connectMsg" aria-live="polite"></div>
   </section>
 
-  <section>
-    <h2><span class="n">2</span>Instructions</h2>
-    <div class="seg" role="group" aria-label="Mode">
-      <button id="modeInitial" aria-pressed="true">First-time portfolio</button>
-      <button id="modeRebal" aria-pressed="false">Rebalance</button>
+  <!-- STEP 2 -->
+  <section class="card hidden" id="tradesCard">
+    <h2>What would you like to trade?</h2>
+    <p class="sub">Add each stock you want to buy or sell. Use NSE symbols like <b>RELIANCE</b> or <b>TCS</b>.</p>
+
+    <div class="field" style="margin-top:0">
+      <label>Your current holdings</label>
+      <div class="portfolio" id="portfolio"><span class="empty">Loading…</span></div>
     </div>
-    <p class="muted">One <code>SYMBOL, QUANTITY</code> per line. Or upload a CSV with columns <code>action,symbol,quantity</code> (action: BUY / SELL / ADJUST; INITIAL uses BUY rows).</p>
-    <div id="initialFields">
-      <label for="target">Target portfolio (buy)</label>
-      <textarea id="target">RELIANCE, 10
-TCS, 5
-INFY, 8</textarea>
+
+    <div class="field">
+      <label>Trades</label>
+      <div class="trades" id="trades"></div>
+      <datalist id="symbols"></datalist>
+      <div class="row-actions" style="margin-top:12px">
+        <button class="btn" id="addRow">+ Add a stock</button>
+        <button class="btn link" id="sampleBtn"></button>
+        <label class="btn link" style="cursor:pointer">Import from a file<input type="file" id="csv" accept=".csv,text/csv" hidden></label>
+      </div>
+      <p class="why">File format: one stock per line — <code>RELIANCE,10</code> to buy or <code>INFY,-8</code> to sell.</p>
     </div>
-    <div id="rebalFields" class="row hidden">
-      <div><label for="sell">Sell</label><textarea id="sell">INFY, 8</textarea></div>
-      <div><label for="buy">Buy new</label><textarea id="buy">HDFCBANK, 4
-ITC, 20</textarea></div>
-      <div><label for="adjust">Adjust (±n)</label><textarea id="adjust">TCS, -2
-RELIANCE, 5</textarea></div>
+    <div id="tradesMsg" aria-live="polite"></div>
+    <div class="row-actions">
+      <button class="btn primary big" id="reviewBtn">Review trades</button>
     </div>
-    <div class="actions">
-      <input type="file" id="csv" accept=".csv,text/csv" style="max-width: 280px">
-      <button id="previewBtn">Preview</button>
-      <button class="primary" id="executeBtn">Execute</button>
-      <label style="display:inline-flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="useSink" checked style="width:auto"> webhook to dev sink</label>
-      <span class="muted mono" id="idemInfo"></span>
-    </div>
-    <div id="planMsg"></div>
   </section>
 
-  <section>
-    <h2><span class="n">3</span>Results</h2>
-    <div id="execHead" class="muted">No execution yet.</div>
-    <div class="summary" id="summary"></div>
-    <div class="table-wrap"><table id="orders" class="hidden">
-      <thead><tr><th>#</th><th>Phase</th><th>Side</th><th>Symbol</th><th>Qty</th><th>Filled</th><th>Avg</th><th>Status</th><th>Tries</th><th>Broker id</th><th>Reason</th></tr></thead>
-      <tbody></tbody>
-    </table></div>
-    <div class="actions">
-      <button id="reconcileBtn" disabled>Re-check with broker</button>
-      <button id="notifyBtn" disabled>Resend notification</button>
+  <!-- STEP 3 -->
+  <section class="card hidden" id="reviewCard">
+    <h2>Review your trades</h2>
+    <p class="sub">Nothing has been placed yet. Check the list, then press <b>Place orders</b>.</p>
+    <div class="plan" id="plan"></div>
+    <p class="why">Sales happen first so the money from them can pay for the purchases. Orders are placed at the current market price.</p>
+    <div id="reviewMsg" aria-live="polite"></div>
+    <div class="row-actions">
+      <button class="btn primary big" id="placeBtn">Place orders</button>
+      <button class="btn" id="backBtn">Back</button>
     </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="card hidden" id="resultsCard" aria-live="polite">
+    <h2>Your orders</h2>
+    <div id="banner"></div>
+    <div class="progress" aria-hidden="true"><div id="progressBar"></div></div>
+    <div id="resultsMsg"></div>
+    <div class="results" id="results"></div>
+    <div class="row-actions">
+      <button class="btn primary" id="newBtn">Make more trades</button>
+      <button class="btn hidden" id="recheckBtn">Check again with broker</button>
+      <button class="btn link" id="techToggle">Show technical details</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="historyCard">
+    <h2>Recent activity</h2>
+    <p class="sub">Your last few batches of trades on this account. Tap one to see its details.</p>
+    <div class="history" id="history"></div>
   </section>
 </main>
+<footer>The Practice account uses simulated prices. Real brokers trade only when the server owner has switched live trading on.</footer>
+
+<dialog id="settingsDlg">
+  <h2 style="margin-top:0">Settings</h2>
+  <div class="field"><label for="apiKey">Access key</label><input type="password" id="apiKey" autocomplete="off"><div class="hint">Given to you by whoever runs this server. Local default: <code>dev-key</code></div></div>
+  <div class="row-actions">
+    <button class="btn primary" id="saveSettings">Save</button>
+    <button class="btn" id="disconnectBtn">Disconnect broker</button>
+    <button class="btn link" id="closeSettings">Close</button>
+  </div>
+</dialog>
+
 <script>
 (() => {
+  "use strict";
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } },
-                  set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
+  };
+  const money = (v) => v == null ? "" : "₹" + Number(v).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  let brokers = [], connectionId = store.get("connectionId"), mode = "INITIAL";
-  let idemKey = null, idemFor = null, executionId = null, pollTimer = null;
-  if (store.get("apiKey")) $("apiKey").value = store.get("apiKey");
+  const BROKERS = {
+    mock:     { label: "Practice account", note: "Pretend money", color: "#2f6bff", mark: "▶" },
+    zerodha:  { label: "Zerodha", note: "Kite", color: "#387ed1", mark: "Z" },
+    upstox:   { label: "Upstox", note: "", color: "#5a2d82", mark: "U" },
+    fyers:    { label: "Fyers", note: "", color: "#1d3c78", mark: "F" },
+    angelone: { label: "Angel One", note: "", color: "#e2621b", mark: "A" },
+    groww:    { label: "Groww", note: "", color: "#00b386", mark: "G" },
+  };
+  const CRED_FIELDS = {
+    angelone: [["client_code", "Client code", "text"], ["pin", "PIN", "password"], ["totp", "6-digit code from your authenticator app", "text"]],
+    groww: [["api_key", "API key", "password"], ["totp", "6-digit code from your authenticator app", "text"]],
+  };
+  const POPULAR = ["RELIANCE", "TCS", "INFY", "HDFCBANK", "ICICIBANK", "SBIN", "ITC", "LT", "HINDUNILVR", "BHARTIARTL",
+    "KOTAKBANK", "AXISBANK", "WIPRO", "MARUTI", "ASIANPAINT", "HCLTECH", "SUNPHARMA", "NTPC", "POWERGRID", "ONGC", "TATASTEEL"];
 
-  async function api(method, path, body, extraHeaders = {}) {
-    const headers = { "X-API-Key": $("apiKey").value.trim(), ...extraHeaders };
-    if (body !== undefined) headers["Content-Type"] = "application/json";
-    const res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const ORDER_STATUS = {
+    PENDING: ["Waiting", "p-mute"], SUBMITTING: ["Sending…", "p-run"], RECONCILING: ["Checking with broker…", "p-run"],
+    SUBMITTED: ["Sent", "p-run"], OPEN: ["Waiting at exchange", "p-run"], PARTIALLY_FILLED: ["Partly done", "p-warn"],
+    FILLED: ["Done", "p-ok"], REJECTED: ["Rejected", "p-bad"], CANCELLED: ["Cancelled", "p-bad"],
+    FAILED: ["Not placed", "p-bad"], UNKNOWN: ["Needs your attention", "p-warn"], SKIPPED: ["Not sent", "p-mute"],
+  };
+  const FINISHED = ["FILLED", "REJECTED", "CANCELLED", "FAILED", "UNKNOWN", "SKIPPED"];
+  const RUNNING = ["ACCEPTED", "RUNNING"];
+  const FRIENDLY_ERRORS = {
+    UNAUTHORIZED: "Your access key wasn't accepted. Open Settings and check it.",
+    NETWORK: "Can't reach the server. Is it running?",
+    BROKER_REAUTH_REQUIRED: "Your broker login has expired. Please connect your account again.",
+    EXECUTION_IN_PROGRESS: "Orders are still being placed on this account. Please wait until they finish.",
+    LIVE_TRADING_DISABLED: "Real trading is switched off on this server. Use the Practice account to try things out.",
+    BROKER_UNAVAILABLE: "The broker isn't responding right now. Please try again in a minute.",
+    BROKER_NOT_CONFIGURED: "This broker hasn't been set up on this server yet. Try the Practice account.",
+    INVALID_BROKER_CREDENTIALS: "The broker didn't accept those login details. Please check them and try again.",
+    INVALID_CONNECTION_PARAMS: "Some login details are missing or not in the right format.",
+    CONNECTION_NOT_FOUND: "That broker connection no longer exists. Please connect again.",
+    INVALID_SYMBOL: "We couldn't find this stock on NSE. Check the symbol.",
+    NOT_HELD: "You don't own this stock, so it can't be sold.",
+    INSUFFICIENT_HOLDINGS: "You're trying to sell more than you own.",
+    ALREADY_HELD: "You already own this stock.",
+    DUPLICATE_SYMBOL: "This stock appears more than once. Combine it into one line.",
+    CONFLICTING_INSTRUCTIONS: "This stock is being both bought and sold. Keep only one.",
+    QUANTITY_LIMIT_EXCEEDED: "That quantity is larger than this server allows in one order.",
+    TOO_MANY_ORDERS: "Too many stocks in one go. Split them into smaller batches.",
+    EMPTY_PORTFOLIO: "Add at least one stock.", EMPTY_INSTRUCTIONS: "Add at least one stock.",
+  };
+
+  const state = {
+    brokers: [], chosen: "mock", connection: null, holdings: [], rows: [], plan: null,
+    idemKey: null, idemFor: null, executionId: null, poll: null, sinkAvailable: false, showTech: false, busy: false, lastExecution: null,
+  };
+
+  // ---------------------------------------------------------------- API
+  const apiKey = () => store.get("apiKey") || "dev-key";
+  async function api(method, path, body, headers = {}) {
+    const h = { "X-API-Key": apiKey(), ...headers };
+    if (body !== undefined) h["Content-Type"] = "application/json";
+    let res;
+    try {
+      res = await fetch(path, { method, headers: h, body: body === undefined ? undefined : JSON.stringify(body) });
+    } catch {
+      return { status: 0, data: { error: { code: "NETWORK", message: "Can't reach the server." } } };
+    }
     const text = await res.text();
     let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
-    return { status: res.status, data, headers: res.headers };
+    return { status: res.status, data };
   }
-  function showMsg(el, kind, text) { $(el).innerHTML = text ? `<div class="msg ${kind}">${esc(text)}</div>` : ""; }
-  function errorText(data) {
+  function errorHtml(data, fallback = "Something went wrong.") {
     const e = data && data.error;
-    if (!e) return JSON.stringify(data);
-    const details = (e.details || []).map((d) => `• ${d.symbol ? d.symbol + ": " : ""}${d.message || d.code || JSON.stringify(d)}`).join("\n");
-    return `${e.code}: ${e.message}${details ? "\n" + details : ""}`;
-  }
-
-  // ---------- step 1
-  async function loadBrokers() {
-    const r = await api("GET", "/brokers");
-    if (r.status !== 200) { showMsg("connMsg", "bad", errorText(r.data)); return; }
-    brokers = r.data;
-    $("broker").innerHTML = brokers.map((b) => `<option value="${esc(b.name)}">${esc(b.name)}${b.is_simulator ? " (simulator)" : b.live_enabled ? "" : " — live trading off"}</option>`).join("");
-    $("broker").value = "mock"; brokerChanged();
-    if (connectionId) refreshConnection();
-  }
-  function brokerChanged() {
-    const b = brokers.find((x) => x.name === $("broker").value) || {};
-    $("mockFields").classList.toggle("hidden", b.name !== "mock");
-    $("credFields").classList.toggle("hidden", b.name === "mock" || b.auth_flow !== "CREDENTIALS");
-  }
-  async function connect() {
-    store.set("apiKey", $("apiKey").value.trim());
-    showMsg("connMsg", "", "");
-    const broker = $("broker").value;
-    let credentials = {};
-    try {
-      if (broker === "mock") {
-        credentials = { client_id: $("clientId").value.trim(), scenario: JSON.parse($("scenario").value || "{}") };
-        const h = $("holdings").value.trim(); if (h) credentials.initial_holdings = JSON.parse(h);
-      } else if (!$("credFields").classList.contains("hidden")) {
-        credentials = JSON.parse($("creds").value || "{}");
-      }
-    } catch (e) { showMsg("connMsg", "bad", "Invalid JSON: " + e.message); return; }
-    const r = await api("POST", "/broker-connections", { broker, credentials });
-    if (r.status === 200 && r.data.login_url) {
-      connectionId = r.data.connection_id; store.set("connectionId", connectionId);
-      window.open(r.data.login_url, "_blank", "noopener");
-      showMsg("connMsg", "ok", "Finish the login in the broker window, then click Check status.");
-      $("connInfo").innerHTML = `Pending login · <button id="checkConn">Check status</button>`;
-      $("checkConn").onclick = refreshConnection;
-      return;
+    if (!e) return esc(fallback);
+    const details = (e.details || []).filter((d) => d.code || d.message);
+    if (details.length && (e.code === "INVALID_INSTRUCTIONS" || e.code === "VALIDATION_ERROR")) {
+      return "Please fix these before continuing:<ul>" + details.map((d) =>
+        `<li>${d.symbol ? `<b>${esc(d.symbol)}</b>: ` : ""}${esc(FRIENDLY_ERRORS[d.code] || d.message)}` +
+        `${d.code === "INSUFFICIENT_HOLDINGS" ? ` <small>(${esc(d.message)})</small>` : ""}</li>`).join("") + "</ul>";
     }
-    if (r.status !== 201) { showMsg("connMsg", "bad", errorText(r.data)); return; }
-    connectionId = r.data.connection_id; store.set("connectionId", connectionId);
-    refreshConnection();
+    return esc(FRIENDLY_ERRORS[e.code] || e.message || fallback);
   }
-  async function refreshConnection() {
-    const r = await api("GET", `/broker-connections/${connectionId}`);
-    if (r.status !== 200) { $("connInfo").textContent = "Not connected"; return; }
-    $("connInfo").innerHTML = `<span class="pill s-${esc(r.data.status === "ACTIVE" ? "FILLED" : "FAILED")}">${esc(r.data.status)}</span> ${esc(r.data.broker)} · ${esc(r.data.broker_user_id || "")} · <span class="mono">${esc(connectionId)}</span>`;
-    if (r.data.status !== "ACTIVE") return;
-    const h = await api("GET", `/broker-connections/${connectionId}/holdings`);
-    $("holdingsView").textContent = h.status === 200
-      ? "Holdings: " + (h.data.length ? h.data.map((x) => `${x.symbol} ${x.quantity}`).join(" · ") : "none")
-      : "";
-  }
+  function msg(el, kind, html) { $(el).innerHTML = html ? `<div class="msg ${kind}">${html}</div>` : ""; }
+  const scrollTo = (id) => $(id).scrollIntoView({ behavior: "smooth", block: "start" });
 
-  // ---------- step 2
-  function setMode(m) {
-    mode = m;
-    $("modeInitial").setAttribute("aria-pressed", m === "INITIAL");
-    $("modeRebal").setAttribute("aria-pressed", m === "REBALANCE");
-    $("initialFields").classList.toggle("hidden", m !== "INITIAL");
-    $("rebalFields").classList.toggle("hidden", m !== "REBALANCE");
-  }
-  function parseLines(text, key) {
-    return text.split(/\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map((l) => {
-      const [sym, n] = l.split(/[,\s]+/);
-      const num = Number(n);
-      if (!sym || !Number.isInteger(num)) throw new Error(`Cannot read line "${l}" (expected SYMBOL, NUMBER)`);
-      return { symbol: sym.toUpperCase(), [key]: num };
+  // ---------------------------------------------------------------- stepper
+  function setStep(n) {
+    document.querySelectorAll(".step").forEach((s) => {
+      const k = Number(s.dataset.step);
+      s.classList.toggle("active", k === n);
+      s.classList.toggle("done", k < n);
+      s.querySelector(".dot").textContent = k < n ? "✓" : k;
     });
   }
-  function buildRequest() {
-    const base = { connection_id: connectionId, mode };
-    if ($("useSink").checked) base.callback_url = location.origin + "/dev/webhook-sink";  // dev servers only
-    if (mode === "INITIAL") return { ...base, target: parseLines($("target").value, "quantity") };
-    return { ...base, sell: parseLines($("sell").value, "quantity"), buy: parseLines($("buy").value, "quantity"),
-             adjust: parseLines($("adjust").value, "delta") };
+
+  // ---------------------------------------------------------------- step 1: connect
+  function practiceId() {
+    let id = store.get("practiceId");
+    if (!id) { id = "PRACTICE" + Math.random().toString(36).slice(2, 7).toUpperCase(); store.set("practiceId", id); }
+    return id;
   }
-  function onCsv(file) {
+  function renderBrokers() {
+    const names = state.brokers.map((b) => b.name).sort((a, b) => (a === "mock" ? -1 : b === "mock" ? 1 : a.localeCompare(b)));
+    $("brokerList").innerHTML = names.map((n) => {
+      const meta = BROKERS[n] || { label: n, note: "", color: "#667085", mark: n[0].toUpperCase() };
+      const info = state.brokers.find((b) => b.name === n);
+      const note = n === "mock" ? meta.note : info.live_enabled ? (meta.note || "Real account") : "Live trading off";
+      return `<button class="broker" aria-pressed="${n === state.chosen}" data-name="${esc(n)}">
+        <span class="mark" style="background:${meta.color}">${esc(meta.mark)}</span>
+        <span><b>${esc(meta.label)}</b><small>${esc(note)}</small></span></button>`;
+    }).join("");
+    $("brokerList").querySelectorAll(".broker").forEach((b) => b.onclick = () => { state.chosen = b.dataset.name; renderBrokers(); renderConnectForm(); });
+  }
+  function renderConnectForm() {
+    const info = state.brokers.find((b) => b.name === state.chosen) || {};
+    const isMock = state.chosen === "mock";
+    const isRedirect = info.auth_flow === "REDIRECT";
+    const label = (BROKERS[state.chosen] || {}).label || state.chosen;
+    $("practiceForm").classList.toggle("hidden", !isMock);
+    $("credForm").classList.toggle("hidden", isMock || isRedirect);
+    $("redirectNote").classList.toggle("hidden", !isRedirect);
+    $("redirectName").textContent = label;
+    $("practiceIdText").textContent = "Practice account ID: " + practiceId();
+    $("credFields").innerHTML = (CRED_FIELDS[state.chosen] || []).map(([k, l, type]) =>
+      `<div class="field" style="margin-top:0"><label for="cred_${k}">${esc(l)}</label><input type="${type}" id="cred_${k}" data-key="${k}" autocomplete="off"></div>`).join("");
+    $("connectBtn").textContent = isRedirect ? `Log in with ${label}` : "Connect";
+    $("checkLoginBtn").classList.add("hidden");
+    msg("connectMsg", "", "");
+  }
+  function practiceScenario() {
+    const s = { symbols: {} };
+    if ($("optSlow").checked) s.fill_delay_s = 1.5;
+    if ($("optBusy").checked) { s.rate_limit_first_n = 2; s.retry_after_s = 0.3; }
+    const rej = $("optRejectSym").value.trim().toUpperCase();
+    const lost = $("optLostSym").value.trim().toUpperCase();
+    if ($("optReject").checked && rej) s.symbols[rej] = "REJECTED";
+    if ($("optLost").checked && lost) s.symbols[lost] = "TIMEOUT_AFTER_PLACE";
+    return s;
+  }
+  async function connect() {
+    msg("connectMsg", "", "");
+    const info = state.brokers.find((b) => b.name === state.chosen) || {};
+    let credentials = {};
+    if (state.chosen === "mock") {
+      credentials = { client_id: practiceId(), scenario: practiceScenario() };
+    } else if (info.auth_flow === "CREDENTIALS") {
+      document.querySelectorAll("#credFields input").forEach((i) => { if (i.value.trim()) credentials[i.dataset.key] = i.value.trim(); });
+    }
+    $("connectBtn").disabled = true;
+    const r = await api("POST", "/broker-connections", { broker: state.chosen, credentials });
+    $("connectBtn").disabled = false;
+    if (r.status === 200 && r.data.login_url) {
+      store.set("connectionId", r.data.connection_id);
+      window.open(r.data.login_url, "_blank", "noopener");
+      $("checkLoginBtn").classList.remove("hidden");
+      msg("connectMsg", "info", "Finish logging in on the broker's page, then press <b>I've logged in</b>.");
+      return;
+    }
+    if (r.status !== 201) { msg("connectMsg", "bad", errorHtml(r.data, "Couldn't connect.")); return; }
+    document.querySelectorAll("#credFields input").forEach((i) => { i.value = ""; });
+    store.set("connectionId", r.data.connection_id);
+    state.rows = [];
+    await loadConnection();
+  }
+  async function loadConnection() {
+    const id = store.get("connectionId");
+    if (!id) return showConnect();
+    const r = await api("GET", `/broker-connections/${encodeURIComponent(id)}`);
+    if (r.status !== 200) { store.set("connectionId", null); return showConnect(); }
+    if (r.data.status === "PENDING_LOGIN") {
+      showConnect(); $("checkLoginBtn").classList.remove("hidden");
+      msg("connectMsg", "info", "Still waiting for the broker login to finish.");
+      return;
+    }
+    if (r.data.status !== "ACTIVE") {
+      showConnect();
+      msg("connectMsg", "bad", "Your broker login has expired. Please connect again.");
+      return;
+    }
+    state.connection = r.data;
+    const meta = BROKERS[r.data.broker] || { label: r.data.broker };
+    $("connectedBox").innerHTML = `<div class="connected"><span class="tick">✓</span>
+      <span style="flex:1"><b>Connected to ${esc(meta.label)}</b><small>${esc(r.data.broker === "mock" ? "Pretend money · ID " : "Account ")}${esc(r.data.broker_user_id || "")}</small></span>
+      <button class="btn" id="switchBtn">Change</button></div>`;
+    $("switchBtn").onclick = () => { $("chooser").classList.remove("hidden"); $("connectedBox").classList.add("hidden"); };
+    $("connectedBox").classList.remove("hidden");
+    $("chooser").classList.add("hidden");
+    msg("connectMsg", "", "");
+    if ($("resultsCard").classList.contains("hidden")) { $("tradesCard").classList.remove("hidden"); $("reviewCard").classList.add("hidden"); setStep(2); }
+    await Promise.all([loadHoldings(), loadHistory()]);
+  }
+  function showConnect() {
+    state.connection = null;
+    $("connectedBox").classList.add("hidden"); $("chooser").classList.remove("hidden");
+    ["tradesCard", "reviewCard", "resultsCard", "historyCard"].forEach((c) => $(c).classList.add("hidden"));
+    setStep(1);
+  }
+
+  // ---------------------------------------------------------------- step 2: trades
+  async function loadHoldings() {
+    if (!state.connection) return;
+    const r = await api("GET", `/broker-connections/${encodeURIComponent(state.connection.connection_id)}/holdings`);
+    state.holdings = r.status === 200 ? r.data : [];
+    $("portfolio").innerHTML = state.holdings.length
+      ? state.holdings.map((h) => `<span class="chip"><b>${esc(h.symbol)}</b>${esc(h.quantity)} shares${h.avg_price ? ` · avg ${esc(money(h.avg_price))}` : ""}</span>`).join("")
+      : `<span class="empty">You don't own any stocks in this account yet.</span>`;
+    $("symbols").innerHTML = [...new Set([...state.holdings.map((h) => h.symbol), ...POPULAR])].map((s) => `<option value="${esc(s)}">`).join("");
+    if (!state.rows.length) setSample();
+    renderRows();
+  }
+  const held = (sym) => (state.holdings.find((h) => h.symbol === sym) || {}).quantity || 0;
+  function setSample() {
+    if (state.holdings.length) {
+      const [first, second] = state.holdings;
+      state.rows = [{ side: "SELL", symbol: first.symbol, qty: Math.max(1, Math.floor(first.quantity / 2)) }];
+      if (second) state.rows.push({ side: "BUY", symbol: second.symbol, qty: 2 });
+      state.rows.push({ side: "BUY", symbol: POPULAR.find((s) => !held(s)) || "SBIN", qty: 5 });
+    } else {
+      state.rows = [{ side: "BUY", symbol: "RELIANCE", qty: 10 }, { side: "BUY", symbol: "TCS", qty: 5 }, { side: "BUY", symbol: "INFY", qty: 8 }];
+    }
+  }
+  function renderRows() {
+    $("sampleBtn").textContent = state.holdings.length ? "Fill in an example" : "Fill in an example portfolio";
+    $("trades").innerHTML = state.rows.map((r, i) => {
+      const own = r.symbol ? held(r.symbol) : 0;
+      const hint = !r.symbol ? "" : own ? `You own ${own}.` : r.side === "SELL" ? "You don't own this stock." : "New stock for you.";
+      return `<div class="trade" data-i="${i}">
+        <div class="side" role="group" aria-label="Buy or sell">
+          <button class="buy ${r.side === "BUY" ? "on" : ""}" data-side="BUY">Buy</button>
+          <button class="sell ${r.side === "SELL" ? "on" : ""}" data-side="SELL">Sell</button>
+        </div>
+        <input class="sym" type="text" list="symbols" placeholder="Stock, e.g. RELIANCE" value="${esc(r.symbol)}" aria-label="Stock symbol" autocapitalize="characters" spellcheck="false">
+        <input class="qty" type="number" min="1" step="1" placeholder="Qty" value="${esc(r.qty ?? "")}" aria-label="Quantity">
+        <button class="x" title="Remove" aria-label="Remove">×</button>
+        <div class="owned">${esc(hint)}</div>
+      </div>`;
+    }).join("") || `<p class="empty">No trades yet. Press “Add a stock”.</p>`;
+    $("trades").querySelectorAll(".trade").forEach((row) => {
+      const i = Number(row.dataset.i);
+      row.querySelectorAll(".side button").forEach((b) => b.onclick = () => { state.rows[i].side = b.dataset.side; renderRows(); });
+      row.querySelector(".sym").oninput = (e) => { state.rows[i].symbol = e.target.value.toUpperCase().trim(); };
+      row.querySelector(".sym").onchange = () => renderRows();
+      row.querySelector(".qty").oninput = (e) => { state.rows[i].qty = e.target.value === "" ? null : Number(e.target.value); };
+      row.querySelector(".x").onclick = () => { state.rows.splice(i, 1); renderRows(); };
+    });
+  }
+  function importCsv(file) {
     const reader = new FileReader();
     reader.onload = () => {
-      const rows = String(reader.result).split(/\r?\n/).map((l) => l.split(",").map((c) => c.trim())).filter((r) => r.length >= 3);
-      const header = rows[0].map((h) => h.toLowerCase());
-      const body = header.includes("action") ? rows.slice(1) : rows;
-      const bucket = { BUY: [], SELL: [], ADJUST: [] };
-      for (const [action, sym, qty] of body) { (bucket[action.toUpperCase()] || bucket.BUY).push(`${sym}, ${qty}`); }
-      if (bucket.SELL.length || bucket.ADJUST.length) {
-        setMode("REBALANCE"); $("sell").value = bucket.SELL.join("\n"); $("buy").value = bucket.BUY.join("\n"); $("adjust").value = bucket.ADJUST.join("\n");
-      } else { setMode("INITIAL"); $("target").value = bucket.BUY.join("\n"); }
-      showMsg("planMsg", "ok", `Loaded ${body.length} rows from ${file.name}`);
+      const rows = [];
+      for (const line of String(reader.result).split(/\r?\n/)) {
+        const cells = line.split(",").map((c) => c.trim()).filter(Boolean);
+        if (cells.length < 2) continue;
+        let side = "BUY", sym, qty;
+        if (cells.length >= 3) { side = /^s/i.test(cells[0]) ? "SELL" : "BUY"; sym = cells[1]; qty = Number(cells[2]); }
+        else { sym = cells[0]; qty = Number(cells[1]); if (qty < 0) { side = "SELL"; qty = -qty; } }
+        if (!sym || !Number.isFinite(qty) || /^(symbol|stock|action)$/i.test(sym)) continue;
+        rows.push({ side, symbol: sym.toUpperCase(), qty });
+      }
+      if (!rows.length) { msg("tradesMsg", "bad", "We couldn't read any trades from that file."); return; }
+      state.rows = rows; renderRows();
+      msg("tradesMsg", "ok", `Loaded ${rows.length} trade${rows.length > 1 ? "s" : ""} from ${esc(file.name)}.`);
     };
     reader.readAsText(file);
   }
-  async function preview() {
-    if (!connectionId) { showMsg("planMsg", "bad", "Connect a broker first."); return; }
-    let req; try { req = buildRequest(); } catch (e) { showMsg("planMsg", "bad", e.message); return; }
+
+  /* Turn the simple Buy/Sell list into the API request; the user never sees "modes":
+     nothing owned and only buys -> first-time portfolio (INITIAL); otherwise a REBALANCE where
+     Sell -> sell, Buy of something already owned -> adjust +n, Buy of something new -> buy. */
+  function buildRequest() {
+    const errors = [];
+    const rows = state.rows.filter((r) => r.symbol || r.qty);
+    if (!rows.length) errors.push("Add at least one stock.");
+    const seen = new Set();
+    for (const r of rows) {
+      const sym = (r.symbol || "").toUpperCase();
+      if (!sym) { errors.push("One line is missing a stock name."); continue; }
+      if (!Number.isInteger(r.qty) || r.qty <= 0) errors.push(`<b>${esc(sym)}</b>: enter a whole number of shares (1 or more).`);
+      if (seen.has(sym)) errors.push(`<b>${esc(sym)}</b> appears more than once. Combine it into one line.`);
+      seen.add(sym);
+    }
+    if (errors.length) return { errors };
+    const base = { connection_id: state.connection.connection_id };
+    if (state.sinkAvailable) base.callback_url = location.origin + "/dev/webhook-sink";
+    const norm = rows.map((r) => ({ ...r, symbol: r.symbol.toUpperCase() }));
+    if (!state.holdings.length && norm.every((r) => r.side === "BUY")) {
+      return { req: { ...base, mode: "INITIAL", target: norm.map((r) => ({ symbol: r.symbol, quantity: r.qty })) } };
+    }
+    const req = { ...base, mode: "REBALANCE", sell: [], buy: [], adjust: [] };
+    for (const r of norm) {
+      if (r.side === "SELL") req.sell.push({ symbol: r.symbol, quantity: r.qty });
+      else if (held(r.symbol)) req.adjust.push({ symbol: r.symbol, delta: r.qty });
+      else req.buy.push({ symbol: r.symbol, quantity: r.qty });
+    }
+    return { req };
+  }
+
+  // ---------------------------------------------------------------- step 3: review & place
+  async function review() {
+    msg("tradesMsg", "", "");
+    const { req, errors } = buildRequest();
+    if (errors) { msg("tradesMsg", "bad", "Please fix these before continuing:<ul>" + errors.map((e) => `<li>${e}</li>`).join("") + "</ul>"); return; }
+    $("reviewBtn").disabled = true;
     const r = await api("POST", "/executions/preview", req);
-    if (r.status !== 200) { showMsg("planMsg", "bad", errorText(r.data)); return; }
-    if (!r.data.valid) { showMsg("planMsg", "bad", r.data.errors.map((e) => `• ${e.symbol ? e.symbol + ": " : ""}${e.message}`).join("\n")); return; }
-    showMsg("planMsg", "ok", "Plan (sells run before buys):\n" + r.data.orders.map((o) => `  ${o.seq}. phase ${o.phase}  ${o.side.padEnd(4)} ${o.symbol} × ${o.quantity}`).join("\n"));
+    $("reviewBtn").disabled = false;
+    if (r.status !== 200) { msg("tradesMsg", "bad", errorHtml(r.data)); return; }
+    if (!r.data.valid) { msg("tradesMsg", "bad", errorHtml({ error: { code: "INVALID_INSTRUCTIONS", details: r.data.errors } })); return; }
+    state.plan = { req, orders: r.data.orders };
+    const sells = r.data.orders.filter((o) => o.side === "SELL"), buys = r.data.orders.filter((o) => o.side === "BUY");
+    const li = (o) => `<li><span class="tag ${o.side === "BUY" ? "buy" : "sell"}">${o.side}</span><b>${esc(o.quantity)}</b> × ${esc(o.symbol)}</li>`;
+    $("plan").innerHTML =
+      (sells.length ? `<h3>First, sell</h3><ol>${sells.map(li).join("")}</ol>` : "") +
+      (buys.length ? `<h3>${sells.length ? "Then, buy" : "Buy"}</h3><ol>${buys.map(li).join("")}</ol>` : "");
+    $("placeBtn").textContent = `Place ${r.data.orders.length} order${r.data.orders.length > 1 ? "s" : ""}`;
+    msg("reviewMsg", "", "");
+    $("tradesCard").classList.add("hidden");
+    $("reviewCard").classList.remove("hidden");
+    setStep(3);
+    scrollTo("reviewCard");
   }
-  async function execute() {
-    if (!connectionId) { showMsg("planMsg", "bad", "Connect a broker first."); return; }
-    let req; try { req = buildRequest(); } catch (e) { showMsg("planMsg", "bad", e.message); return; }
-    // One Idempotency-Key per intent: an identical retry (double click, network blip) reuses it.
-    const fingerprint = JSON.stringify(req);
-    if (fingerprint !== idemFor) { idemKey = crypto.randomUUID(); idemFor = fingerprint; }
-    $("idemInfo").textContent = `Idempotency-Key ${idemKey.slice(0, 8)}…`;
-    $("executeBtn").disabled = true;
-    try {
-      const r = await api("POST", "/executions", req, { "Idempotency-Key": idemKey });
-      if (r.status !== 202 && r.status !== 200) { showMsg("planMsg", "bad", errorText(r.data)); return; }
-      showMsg("planMsg", "ok", r.status === 200 ? "Already submitted — showing the existing execution (idempotent replay)." : "Accepted. Executing…");
-      executionId = r.data.execution_id; render(r.data); startPolling();
-    } finally { $("executeBtn").disabled = false; }
+  async function place() {
+    if (state.busy) return;
+    const req = state.plan.req;
+    // One key per set of trades: pressing again (or a network retry) can never place them twice.
+    const fp = JSON.stringify(req);
+    if (fp !== state.idemFor) { state.idemKey = crypto.randomUUID(); state.idemFor = fp; }
+    state.busy = true; $("placeBtn").disabled = true;
+    $("placeBtn").innerHTML = `<span class="spin"></span> Placing…`;
+    const r = await api("POST", "/executions", req, { "Idempotency-Key": state.idemKey });
+    state.busy = false; $("placeBtn").disabled = false;
+    if (r.status !== 202 && r.status !== 200) {
+      $("placeBtn").textContent = "Try again";
+      msg("reviewMsg", "bad", errorHtml(r.data));
+      return;
+    }
+    state.executionId = r.data.execution_id;
+    $("reviewCard").classList.add("hidden");
+    $("resultsCard").classList.remove("hidden");
+    msg("resultsMsg", "", "");
+    renderExecution(r.data, r.status === 200);
+    pollExecution();
+    scrollTo("resultsCard");
   }
 
-  // ---------- step 3
-  function startPolling() {
-    clearTimeout(pollTimer);
+  // ---------------------------------------------------------------- results
+  function pollExecution() {
+    clearTimeout(state.poll);
     const tick = async () => {
-      const r = await api("GET", `/executions/${executionId}`);
-      if (r.status === 200) render(r.data);
-      const running = r.status === 200 && (["ACCEPTED", "RUNNING"].includes(r.data.status) || r.data.notification.status === "PENDING");
-      if (running) pollTimer = setTimeout(tick, 800); else refreshConnection();
+      const r = await api("GET", `/executions/${encodeURIComponent(state.executionId)}`);
+      if (r.status === 200) renderExecution(r.data);
+      if (r.status === 200 && RUNNING.includes(r.data.status)) state.poll = setTimeout(tick, 700);
+      else { loadHoldings(); loadHistory(); }
     };
-    tick();
+    state.poll = setTimeout(tick, 500);
   }
-  function render(ex) {
-    const n = ex.notification || {};
-    $("execHead").innerHTML = `Execution <span class="mono">${esc(ex.execution_id)}</span> · <span class="pill s-${esc(ex.status)}">${esc(ex.status)}</span>` +
-      ` · notification <span class="pill s-${esc(n.status)}">${esc(n.status)}</span>${ex.error_code ? ` · <span class="s-FAILED">${esc(ex.error_code)}</span>` : ""}`;
-    const s = ex.summary || {};
-    $("summary").innerHTML = ex.summary ? ["total", "filled", "partially_filled", "open", "rejected", "cancelled", "failed", "unknown", "skipped"]
-      .filter((k) => s[k]).map((k) => `<span>${esc(k.replace("_", " "))}: <b>${esc(s[k])}</b></span>`).join("") : "";
-    $("orders").classList.remove("hidden");
-    $("orders").querySelector("tbody").innerHTML = ex.orders.map((o) => `<tr>
-      <td>${esc(o.seq)}</td><td>${o.phase === 1 ? "SELL" : "BUY"}</td><td>${esc(o.side)}</td><td><b>${esc(o.symbol)}</b></td>
-      <td>${esc(o.quantity)}</td><td>${esc(o.filled_quantity)}</td><td>${esc(o.average_price ?? "")}</td>
-      <td><span class="pill s-${esc(o.status)}">${esc(o.status)}</span></td><td>${esc(o.attempts)}</td>
-      <td class="mono">${esc(o.broker_order_id ?? "")}</td><td class="reason">${esc([o.error_code, o.error_message].filter(Boolean).join(" — "))}</td></tr>`).join("");
-    const done = !["ACCEPTED", "RUNNING"].includes(ex.status);
-    $("reconcileBtn").disabled = !done; $("notifyBtn").disabled = !done;
+  function orderNote(o) {
+    const verb = o.side === "BUY" ? "Bought" : "Sold", noun = o.side === "BUY" ? "bought" : "sold";
+    switch (o.status) {
+      case "FILLED": return `${verb} ${o.filled_quantity} at ${money(o.average_price)} each.`;
+      case "PARTIALLY_FILLED": return `${verb} ${o.filled_quantity} of ${o.quantity} so far. The rest is still waiting at the exchange and expires at the end of the day if not filled.`;
+      case "OPEN": case "SUBMITTED": return "Waiting at the exchange. It expires at the end of the day if not filled.";
+      case "REJECTED": return `The broker said: “${o.error_message || "rejected"}”. Nothing was ${noun}.`;
+      case "CANCELLED": return `Cancelled${o.error_message ? `: “${o.error_message}”` : ""}.${o.filled_quantity ? ` ${o.filled_quantity} had already gone through.` : ""}`;
+      case "FAILED": return o.error_code === "NOT_PLACED_CONFIRMED"
+        ? "Confirmed that this order never reached the broker. It's safe to place it again."
+        : `This order could not be sent (${(o.error_message || "").replace(" (not placed)", "")}). Nothing was ${noun}, so it's safe to try again.`;
+      case "UNKNOWN": return `We lost contact with the broker right after sending this. To avoid it being ${noun} twice, we did NOT send it again. Press “Check again with broker” in a minute.`;
+      case "SKIPPED": return "Not sent, because the app restarted before it got to this order. It's safe to place again.";
+      case "RECONCILING": return "The broker's reply didn't arrive, so we're checking its order list to see whether this order went through.";
+      case "PENDING": return o.side === "BUY" ? "Queued. Purchases start once the sales are finished." : "Queued.";
+      default: return o.attempts > 1 ? `Sending (try ${o.attempts})…` : "Sending to the broker…";
+    }
   }
-  async function reconcile() {
-    const r = await api("POST", `/executions/${executionId}/reconcile`);
-    if (r.status === 200) render(r.data); else showMsg("planMsg", "bad", errorText(r.data));
+  function renderExecution(ex, replay = false) {
+    state.lastExecution = ex;
+    const orders = ex.orders || [];
+    const running = RUNNING.includes(ex.status);
+    const total = orders.length;
+    const filled = orders.filter((o) => o.status === "FILLED").length;
+    const finished = orders.filter((o) => FINISHED.includes(o.status)).length;
+    let tone, icon, title, sub;
+    if (running) {
+      tone = "tone-run"; icon = `<span class="spin"></span>`; title = "Placing your orders…"; sub = "Sales go first, then purchases. You can keep this page open.";
+    } else if (ex.status === "COMPLETED") {
+      tone = "tone-ok"; icon = "✓"; title = `All ${total} order${total > 1 ? "s" : ""} completed`; sub = "Your holdings have been updated.";
+    } else if (ex.status === "NEEDS_REVIEW") {
+      tone = "tone-warn"; icon = "!"; title = "Some orders need your attention"; sub = "See the highlighted orders below.";
+    } else if (ex.status === "PARTIALLY_COMPLETED") {
+      tone = "tone-warn"; icon = "!"; title = `${filled} of ${total} orders completed`; sub = "The others are explained below.";
+    } else {
+      tone = "tone-bad"; icon = "×"; title = "None of the orders went through"; sub = "Nothing was bought or sold. The reasons are below.";
+    }
+    if (replay) sub = "These trades were already placed, so we're showing that result instead of placing them again.";
+    if (ex.error_code === "BROKER_REAUTH_REQUIRED") sub += " Your broker login expired during this — please connect again.";
+    $("banner").innerHTML = `<div class="banner ${tone}"><span class="big-icon">${icon}</span><span><b>${esc(title)}</b><small>${esc(sub)}</small></span></div>`;
+    $("progressBar").style.width = total ? `${Math.round((running ? finished : total) / total * 100)}%` : "0";
+    $("results").innerHTML = orders.map((o) => {
+      const [label, cls] = ORDER_STATUS[o.status] || [o.status, "p-mute"];
+      return `<div class="result">
+        <span class="what"><span class="tag ${o.side === "BUY" ? "buy" : "sell"}">${esc(o.side)}</span>${esc(o.quantity)} × ${esc(o.symbol)}</span>
+        <span class="pill ${cls}">${["SUBMITTING", "RECONCILING"].includes(o.status) ? `<span class="spin"></span> ` : ""}${esc(label)}</span>
+        <span class="note">${esc(orderNote(o))}</span>
+        ${state.showTech ? `<span class="tech">status ${esc(o.status)} · broker order ${esc(o.broker_order_id || "—")} · our tag ${esc(o.client_order_id)} · attempts ${esc(o.attempts)}${o.error_code ? " · " + esc(o.error_code) : ""}</span>` : ""}
+      </div>`;
+    }).join("");
+    const needsCheck = !running && orders.some((o) => ["UNKNOWN", "OPEN", "SUBMITTED", "PARTIALLY_FILLED"].includes(o.status));
+    $("recheckBtn").classList.toggle("hidden", !needsCheck);
   }
-  async function resend() {
-    const r = await api("POST", `/executions/${executionId}/notify`);
-    if (r.status === 200) startPolling(); else showMsg("planMsg", "bad", errorText(r.data));
+  async function recheck() {
+    $("recheckBtn").disabled = true;
+    const r = await api("POST", `/executions/${encodeURIComponent(state.executionId)}/reconcile`);
+    $("recheckBtn").disabled = false;
+    if (r.status === 200) {
+      renderExecution(r.data); loadHoldings(); loadHistory();
+      const still = r.data.orders.some((o) => o.status === "UNKNOWN");
+      msg("resultsMsg", still ? "info" : "ok", still
+        ? "Checked with the broker. Some orders still aren't in its order list yet — try again in a minute or two."
+        : "Checked with the broker. Everything is up to date.");
+    } else msg("resultsMsg", "bad", errorHtml(r.data));
+  }
+  function newTrades() {
+    clearTimeout(state.poll);
+    state.rows = []; state.plan = null;
+    $("resultsCard").classList.add("hidden");
+    $("tradesCard").classList.remove("hidden");
+    msg("tradesMsg", "", "");
+    setStep(2);
+    loadHoldings();
+    scrollTo("tradesCard");
   }
 
-  $("broker").onchange = brokerChanged;
+  // ---------------------------------------------------------------- history
+  const EXEC_LABEL = { ACCEPTED: "Starting", RUNNING: "In progress", COMPLETED: "All done", PARTIALLY_COMPLETED: "Partly done", FAILED: "Nothing went through", NEEDS_REVIEW: "Needs attention" };
+  async function loadHistory() {
+    if (!state.connection) return;
+    const r = await api("GET", `/executions?connection_id=${encodeURIComponent(state.connection.connection_id)}&limit=5`);
+    const items = r.status === 200 ? r.data.items : [];
+    $("historyCard").classList.toggle("hidden", !items.length);
+    $("history").innerHTML = items.map((e) => {
+      const when = new Date(e.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+      const s = e.summary || {};
+      return `<button data-id="${esc(e.execution_id)}"><span><b>${esc(EXEC_LABEL[e.status] || e.status)}</b> · ${esc(s.total ?? "")}${s.total != null ? " orders" : ""}${s.filled != null ? `, ${esc(s.filled)} done` : ""}</span><small>${esc(when)}</small></button>`;
+    }).join("");
+    $("history").querySelectorAll("button").forEach((b) => b.onclick = async () => {
+      const r2 = await api("GET", `/executions/${encodeURIComponent(b.dataset.id)}`);
+      if (r2.status !== 200) return;
+      state.executionId = b.dataset.id;
+      ["tradesCard", "reviewCard"].forEach((c) => $(c).classList.add("hidden"));
+      $("resultsCard").classList.remove("hidden");
+      msg("resultsMsg", "", "");
+      renderExecution(r2.data);
+      if (RUNNING.includes(r2.data.status)) pollExecution();
+      scrollTo("resultsCard");
+    });
+  }
+
+  // ---------------------------------------------------------------- settings & start-up
+  function openSettings() { $("apiKey").value = apiKey(); $("settingsDlg").showModal(); }
+  async function start() {
+    const r = await api("GET", "/brokers");
+    if (r.status !== 200) {
+      showConnect();
+      msg("connectMsg", "bad", errorHtml(r.data, "Couldn't load the list of brokers.") + (r.status === 401 ? ` <button class="btn link" id="fixKey">Open Settings</button>` : ""));
+      const fix = $("fixKey"); if (fix) fix.onclick = openSettings;
+      return;
+    }
+    state.brokers = r.data;
+    renderBrokers(); renderConnectForm();
+    const sink = await api("GET", "/dev/webhook-sink?execution_id=none");
+    state.sinkAvailable = sink.status === 200;
+    await loadConnection();
+  }
+
   $("connectBtn").onclick = connect;
-  $("modeInitial").onclick = () => setMode("INITIAL");
-  $("modeRebal").onclick = () => setMode("REBALANCE");
-  $("csv").onchange = (e) => e.target.files[0] && onCsv(e.target.files[0]);
-  $("previewBtn").onclick = preview;
-  $("executeBtn").onclick = execute;
-  $("reconcileBtn").onclick = reconcile;
-  $("notifyBtn").onclick = resend;
-  $("apiKey").onchange = () => { store.set("apiKey", $("apiKey").value.trim()); loadBrokers(); };
-  loadBrokers();
+  $("checkLoginBtn").onclick = loadConnection;
+  $("freshAccount").onclick = () => { store.set("practiceId", null); renderConnectForm(); msg("connectMsg", "info", "A fresh, empty practice account will be used when you press Connect."); };
+  $("addRow").onclick = () => { state.rows.push({ side: "BUY", symbol: "", qty: null }); renderRows(); const s = document.querySelectorAll(".trade .sym"); s[s.length - 1]?.focus(); };
+  $("sampleBtn").onclick = () => { setSample(); renderRows(); msg("tradesMsg", "", ""); };
+  $("csv").onchange = (e) => { if (e.target.files[0]) importCsv(e.target.files[0]); e.target.value = ""; };
+  $("reviewBtn").onclick = review;
+  $("placeBtn").onclick = place;
+  $("backBtn").onclick = () => { $("reviewCard").classList.add("hidden"); $("tradesCard").classList.remove("hidden"); setStep(2); };
+  $("newBtn").onclick = newTrades;
+  $("recheckBtn").onclick = recheck;
+  $("techToggle").onclick = () => {
+    state.showTech = !state.showTech;
+    $("techToggle").textContent = state.showTech ? "Hide technical details" : "Show technical details";
+    if (state.lastExecution) renderExecution(state.lastExecution);
+  };
+  $("settingsBtn").onclick = openSettings;
+  $("closeSettings").onclick = () => $("settingsDlg").close();
+  $("saveSettings").onclick = () => { store.set("apiKey", $("apiKey").value.trim() || null); $("settingsDlg").close(); start(); };
+  $("disconnectBtn").onclick = async () => {
+    const id = store.get("connectionId");
+    if (id) await api("DELETE", `/broker-connections/${encodeURIComponent(id)}`);
+    store.set("connectionId", null); state.rows = []; $("settingsDlg").close(); showConnect(); renderConnectForm();
+  };
+  setStep(1);
+  start();
 })();
 </script>
 </body>

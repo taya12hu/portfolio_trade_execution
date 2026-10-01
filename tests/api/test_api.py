@@ -157,5 +157,5 @@ async def test_undecryptable_session_means_reconnect_not_500(client, container):
 
 async def test_console_is_served(client):
     r = await client.get("/ui")
-    assert r.status_code == 200 and "Trade Execution Console" in r.text
+    assert r.status_code == 200 and "Portfolio Trader" in r.text
     assert (await client.get("/", follow_redirects=False)).headers["location"] == "/ui"
