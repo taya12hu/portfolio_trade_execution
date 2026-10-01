@@ -93,7 +93,7 @@ Live order placement stays blocked unless `LIVE_TRADING_ENABLED=true`.
 - [x] Postgres-backed test run — engine + API tests pass on Postgres 16 (3 consecutive runs); `TEST_DATABASE_URL` in env or `.env` (e.g. a Supabase test project)
 
 ## Phase 10 — NICE TO HAVE
-- [x] Single-file HTML UI at `/ui` (connect → paste/upload CSV → preview → execute → live results, idempotent re-click); checked in a browser
+- [x] Single-file HTML UI at `/ui`, redesigned for non-technical users: guided Connect → Trades → Review & place flow, Buy/Sell rows instead of modes, practice options as checkboxes, plain-language results; mobile-friendly; checked in a browser
 - [ ] `OpenAlgoAdapter`
 - [ ] SSE live status, Prometheus metrics, `sell_failure_policy`
 

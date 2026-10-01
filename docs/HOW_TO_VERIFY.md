@@ -38,15 +38,22 @@ The demo script ends with `Demo finished: all expectations met` and stops with a
 
 ## 3. Click through the UI
 
-Open <http://localhost:8000/ui> (API key `dev-key`):
-1. **Connect:** broker `mock`, client id e.g. `ME1`. Holdings show as none.
-2. **Execute:** with the default first-time portfolio. Results show 3 `FILLED`, notification `SENT`.
-3. **Execute again** without changing anything: you get "idempotent replay" and the same execution.
-4. **Rebalance with problems:** change the scenario to
-   `{"fill_delay_s": 0.5, "rate_limit_first_n": 2, "symbols": {"HDFCBANK": "REJECTED", "ITC": "TIMEOUT_AFTER_PLACE"}}`,
-   click **Connect** again, switch to **Rebalance**, **Preview** (the plan lists the sells first), then **Execute**.
-5. **Never-placed order:** try `"ITC": "TIMEOUT_NOT_PLACED"`. ITC becomes `UNKNOWN` and the execution `NEEDS_REVIEW`. It is never resent.
-6. **CSV upload:** a file with columns `action,symbol,quantity`, where action is `BUY`, `SELL` or `ADJUST`.
+Open <http://localhost:8000/ui>. It walks you through three steps: **Connect → Your trades → Review & place**.
+
+1. **Connect:** choose **Practice account** (pretend money) and press **Connect**.
+2. **Your trades:** an example portfolio (RELIANCE 10, TCS 5, INFY 8) is already filled in. Each line has a Buy/Sell switch, a stock and a quantity.
+3. **Review & place:** the review shows exactly what will happen; sales are always listed first. Press **Place 3 orders**. Expect a green "All 3 orders completed" with the price paid for each.
+4. **Rebalance with problems:**
+   1. Press **Make more trades**. Your holdings now appear at the top.
+   2. Press **Change** next to the connected account, open **Practice options**, and tick every box.
+   3. Press **Connect**, then **Fill in an example**, add a line `ITC 20`, then **Review trades** and **Place orders**.
+   4. Expect the sale to finish before the purchases start, HDFCBANK to be **Rejected** with the broker's reason, ITC to be **Done** even though the broker's reply was "lost", and the banner to read "3 of 4 orders completed".
+5. **Mistakes are caught before anything is sent:** sell more than you own, sell a stock you don't own, or list the same stock twice. Each problem is explained next to the stock.
+6. **Other things to try:**
+   - **Show technical details** reveals broker order ids, our tags and retry counts.
+   - **Recent activity** reopens past batches.
+   - **Import from a file** accepts `RELIANCE,10` (buy) or `INFY,-8` (sell), one per line.
+   - The page also works at phone width.
 
 ## 4. Swagger, the database and the logs
 
