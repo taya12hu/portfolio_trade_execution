@@ -6,7 +6,7 @@ Five Indian brokers (Zerodha, Upstox, Fyers, AngelOne, Groww) and a simulator si
 
 > **Simulator vs live.** The `mock` broker is a full exchange simulator, and everything in the demo runs against it. The five real adapters were built from each broker's published API docs and official SDK source, and pass a shared contract test suite against documented response shapes, but **they have not been verified against live accounts**. Real order placement is **disabled** unless `LIVE_TRADING_ENABLED=true`.
 
-Design document: [`docs/PLAN.md`](docs/PLAN.md) · Progress and decisions log: [`TODO.md`](TODO.md)
+Design document: [`docs/PLAN.md`](docs/PLAN.md)
 
 ---
 
