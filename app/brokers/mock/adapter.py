@@ -234,8 +234,8 @@ class MockBrokerAdapter(BrokerAdapter):
             delay_s=scenario.fill_delay_s,
         )
         n = scenario.expire_session_after_orders
-        if n is not None and acct.orders_accepted >= n:
-            acct.valid_tokens.clear()  # token dies after this order was accepted
+        if n is not None and acct.orders_accepted == n:
+            acct.valid_tokens.clear()  # the session dies once, right after the n-th accepted order
         if behaviour == "TIMEOUT_AFTER_PLACE":
             raise AmbiguousSubmission("read timeout (simulated; order WAS placed)")
         return PlaceOrderAck(broker_order_id=order.order_id)
