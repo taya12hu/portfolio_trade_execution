@@ -2,7 +2,7 @@
 
 A FastAPI service that takes a first-time portfolio or an explicit rebalance (sell X, buy new Y, adjust Z by ±n) and executes it on the user's broker with one API call. It logs in to the broker, places and tracks every order, copes with broker failures, rate limits and lost responses, and then sends a signed summary of what succeeded, what failed and why.
 
-Five Indian brokers (Zerodha, Upstox, Fyers, AngelOne, Groww) and a simulator sit behind one adapter interface.
+Five Indian brokers (Zerodha, Upstox, Fyers, AngelOne, Groww) and a simulator sit behind one adapter interface. A browser console at `/ui` runs the whole flow visually: connect, enter or upload a portfolio, execute, view results.
 
 > **Simulator vs live.** The `mock` broker is a full exchange simulator, and everything in the demo runs against it. The five real adapters were built from each broker's published API docs and official SDK source, and pass a shared contract test suite against documented response shapes, but **they have not been verified against live accounts**. Real order placement is **disabled** unless `LIVE_TRADING_ENABLED=true`.
 
@@ -18,7 +18,11 @@ docker compose up --build     # API on :8000, Postgres 16
 ./scripts/demo.sh             # end-to-end walkthrough; exits non-zero if anything is off
 ```
 
-Swagger UI is at <http://localhost:8000/docs>. The dev API key is `dev-key`.
+Then open:
+- **Web console:** <http://localhost:8000/ui>. Try the whole flow in the browser; see [Web console](#web-console) below.
+- **Swagger UI:** <http://localhost:8000/docs>. The dev API key is `dev-key`.
+
+A full checklist for verifying the project is in [`docs/HOW_TO_VERIFY.md`](docs/HOW_TO_VERIFY.md).
 
 Without Docker (SQLite):
 
@@ -27,6 +31,31 @@ python -m venv .venv && .venv/bin/pip install -e ".[dev]"
 DATABASE_URL=sqlite+aiosqlite:///./dev.db .venv/bin/uvicorn --factory app.main:create_app --port 8000
 pytest                        # 230 tests, about 15 seconds
 ```
+
+## Web console
+
+A single-page frontend served by the API at **<http://localhost:8000/ui>**. It is a static HTML file (`frontend/index.html`, vanilla JavaScript, no build step) that only calls the public API, so it exercises the same paths as any other client. It follows the flow in the brief: connect a broker, enter or upload a target portfolio, execute in one click, view the results.
+
+| Step | What you do | What happens |
+|---|---|---|
+| **1. Connect** | Choose a broker. **Practice account** (the simulator) is selected by default. AngelOne and Groww show login fields; Zerodha, Upstox and Fyers open the broker's login page. | `POST /broker-connections`; current holdings are loaded from the broker. |
+| **2. Your trades** | Add Buy/Sell rows (stock + quantity), or **Import from a file** (`RELIANCE,10` to buy, `INFY,-8` to sell). Each row shows how many shares you already hold. | The console turns the rows into the API's instruction types: with no holdings and only buys it sends a first-time portfolio (`INITIAL`); otherwise a `REBALANCE`, where a sell is `sell`, a buy of a held stock is `adjust +n`, and a buy of a new stock is `buy`. |
+| **3. Review & place** | Check the plan (sales listed first), then press **Place orders**. | `POST /executions/preview` validates against live holdings without trading; `POST /executions` runs it with an automatically generated `Idempotency-Key`, so pressing again never places the trades twice. |
+| **Results** | Watch each order update live. | A summary banner, a progress bar and a plain-language line per order: fill price, the broker's rejection reason, orders still open, or orders needing attention, with a **Check again with broker** action (`POST /executions/{id}/reconcile`). |
+
+**Practice options** (checkboxes in step 1) switch on the simulator's failure scenarios, so you can watch the engine handle them:
+- slow fills
+- the broker rate-limiting the first orders
+- a rejected stock
+- a lost broker reply that is recovered without resending
+
+Also available:
+- **Recent activity:** past executions on the account.
+- **Show technical details:** broker order ids, our order tags and retry counts.
+- **Settings:** the access key.
+- **Layout:** light and dark themes, and a phone-friendly layout.
+
+All text coming from users or brokers is HTML-escaped before it is shown.
 
 ## What it does, and deliberately doesn't
 
