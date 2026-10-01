@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trade Execution Console</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1b1f24; --muted: #5f6b7a; --border: #dde2e8;
+    --accent: #2457d6; --accent-text: #ffffff; --ok: #1a7f37; --warn: #9a6700; --bad: #c4314b; --info: #2457d6;
+    --chip: #eef1f5; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1216; --panel: #171b21; --text: #e6e9ee; --muted: #9aa5b4; --border: #2a313a;
+      --accent: #5b8cff; --accent-text: #0b0d10; --ok: #4ac26b; --warn: #d4a72c; --bad: #ff6b81; --info: #7aa2ff; --chip: #222831; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding: 18px 16px 6px; max-width: 1100px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 8px 16px 40px; display: grid; gap: 14px; }
+  section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  h2 { margin: 0 0 10px; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+  h2 .n { background: var(--chip); border-radius: 999px; width: 22px; height: 22px; display: inline-grid; place-items: center; font-size: 12px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+  input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--bg); color: var(--text); font: inherit; }
+  textarea { font-family: var(--mono); font-size: 13px; min-height: 92px; resize: vertical; }
+  .row { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+  button { border: 1px solid var(--border); background: var(--chip); color: var(--text); padding: 8px 14px; border-radius: 7px; font: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .mono { font-family: var(--mono); font-size: 12.5px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); }
+  .msg { margin-top: 10px; padding: 9px 11px; border-radius: 7px; border: 1px solid var(--border); font-size: 13px; white-space: pre-wrap; }
+  .msg.bad { border-color: var(--bad); color: var(--bad); }
+  .msg.ok { border-color: var(--ok); color: var(--ok); }
+  .table-wrap { overflow-x: auto; margin-top: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  td.reason { white-space: normal; min-width: 220px; color: var(--muted); }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--chip); }
+  .s-FILLED, .s-COMPLETED, .s-SENT { color: var(--ok); }
+  .s-REJECTED, .s-FAILED, .s-CANCELLED { color: var(--bad); }
+  .s-UNKNOWN, .s-NEEDS_REVIEW, .s-PARTIALLY_FILLED, .s-PARTIALLY_COMPLETED, .s-SKIPPED { color: var(--warn); }
+  .s-RUNNING, .s-ACCEPTED, .s-SUBMITTING, .s-SUBMITTED, .s-RECONCILING, .s-OPEN, .s-PENDING { color: var(--info); }
+  .summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .summary span { background: var(--chip); border-radius: 7px; padding: 4px 9px; font-size: 12.5px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Trade Execution Console</h1>
+  <p>Connect a broker, enter a portfolio or rebalance, execute in one click. The <b>mock</b> broker is a simulator; real brokers place orders only when the server has <code>LIVE_TRADING_ENABLED=true</code>.</p>
+</header>
+<main>
+  <section>
+    <h2><span class="n">1</span>Connect broker</h2>
+    <div class="row">
+      <div><label for="apiKey">API key</label><input id="apiKey" value="dev-key" autocomplete="off"></div>
+      <div><label for="broker">Broker</label><select id="broker"></select></div>
+    </div>
+    <div id="mockFields">
+      <div class="row">
+        <div><label for="clientId">Client id</label><input id="clientId" value="DEMO1"></div>
+        <div><label for="holdings">Initial holdings (JSON, first connect only)</label><input id="holdings" class="mono" placeholder='{"INFY": 8}'></div>
+      </div>
+      <label for="scenario">Scenario (JSON) — e.g. {"symbols": {"HDFCBANK": "REJECTED", "ITC": "TIMEOUT_AFTER_PLACE"}, "rate_limit_first_n": 2}</label>
+      <textarea id="scenario">{"fill_delay_s": 0.5}</textarea>
+    </div>
+    <div id="credFields" class="hidden">
+      <label for="creds">Credentials (JSON). AngelOne: {"client_code","pin","totp"}. Groww: {"api_key","totp"}. Used once, never stored.</label>
+      <textarea id="creds">{}</textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="connectBtn">Connect</button>
+      <span class="muted" id="connInfo">Not connected</span>
+    </div>
+    <div id="holdingsView" class="muted mono"></div>
+    <div id="connMsg"></div>
+  </section>
+
+  <section>
+    <h2><span class="n">2</span>Instructions</h2>
+    <div class="seg" role="group" aria-label="Mode">
+      <button id="modeInitial" aria-pressed="true">First-time portfolio</button>
+      <button id="modeRebal" aria-pressed="false">Rebalance</button>
+    </div>
+    <p class="muted">One <code>SYMBOL, QUANTITY</code> per line. Or upload a CSV with columns <code>action,symbol,quantity</code> (action: BUY / SELL / ADJUST; INITIAL uses BUY rows).</p>
+    <div id="initialFields">
+      <label for="target">Target portfolio (buy)</label>
+      <textarea id="target">RELIANCE, 10
+TCS, 5
+INFY, 8</textarea>
+    </div>
+    <div id="rebalFields" class="row hidden">
+      <div><label for="sell">Sell</label><textarea id="sell">INFY, 8</textarea></div>
+      <div><label for="buy">Buy new</label><textarea id="buy">HDFCBANK, 4
+ITC, 20</textarea></div>
+      <div><label for="adjust">Adjust (±n)</label><textarea id="adjust">TCS, -2
+RELIANCE, 5</textarea></div>
+    </div>
+    <div class="actions">
+      <input type="file" id="csv" accept=".csv,text/csv" style="max-width: 280px">
+      <button id="previewBtn">Preview</button>
+      <button class="primary" id="executeBtn">Execute</button>
+      <label style="display:inline-flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="useSink" checked style="width:auto"> webhook to dev sink</label>
+      <span class="muted mono" id="idemInfo"></span>
+    </div>
+    <div id="planMsg"></div>
+  </section>
+
+  <section>
+    <h2><span class="n">3</span>Results</h2>
+    <div id="execHead" class="muted">No execution yet.</div>
+    <div class="summary" id="summary"></div>
+    <div class="table-wrap"><table id="orders" class="hidden">
+      <thead><tr><th>#</th><th>Phase</th><th>Side</th><th>Symbol</th><th>Qty</th><th>Filled</th><th>Avg</th><th>Status</th><th>Tries</th><th>Broker id</th><th>Reason</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="actions">
+      <button id="reconcileBtn" disabled>Re-check with broker</button>
+      <button id="notifyBtn" disabled>Resend notification</button>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+  let brokers = [], connectionId = store.get("connectionId"), mode = "INITIAL";
+  let idemKey = null, idemFor = null, executionId = null, pollTimer = null;
+  if (store.get("apiKey")) $("apiKey").value = store.get("apiKey");
+
+  async function api(method, path, body, extraHeaders = {}) {
+    const headers = { "X-API-Key": $("apiKey").value.trim(), ...extraHeaders };
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    const res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    const text = await res.text();
+    let data = null; try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
+    return { status: res.status, data, headers: res.headers };
+  }
+  function showMsg(el, kind, text) { $(el).innerHTML = text ? `<div class="msg ${kind}">${esc(text)}</div>` : ""; }
+  function errorText(data) {
+    const e = data && data.error;
+    if (!e) return JSON.stringify(data);
+    const details = (e.details || []).map((d) => `• ${d.symbol ? d.symbol + ": " : ""}${d.message || d.code || JSON.stringify(d)}`).join("\n");
+    return `${e.code}: ${e.message}${details ? "\n" + details : ""}`;
+  }
+
+  // ---------- step 1
+  async function loadBrokers() {
+    const r = await api("GET", "/brokers");
+    if (r.status !== 200) { showMsg("connMsg", "bad", errorText(r.data)); return; }
+    brokers = r.data;
+    $("broker").innerHTML = brokers.map((b) => `<option value="${esc(b.name)}">${esc(b.name)}${b.is_simulator ? " (simulator)" : b.live_enabled ? "" : " — live trading off"}</option>`).join("");
+    $("broker").value = "mock"; brokerChanged();
+    if (connectionId) refreshConnection();
+  }
+  function brokerChanged() {
+    const b = brokers.find((x) => x.name === $("broker").value) || {};
+    $("mockFields").classList.toggle("hidden", b.name !== "mock");
+    $("credFields").classList.toggle("hidden", b.name === "mock" || b.auth_flow !== "CREDENTIALS");
+  }
+  async function connect() {
+    store.set("apiKey", $("apiKey").value.trim());
+    showMsg("connMsg", "", "");
+    const broker = $("broker").value;
+    let credentials = {};
+    try {
+      if (broker === "mock") {
+        credentials = { client_id: $("clientId").value.trim(), scenario: JSON.parse($("scenario").value || "{}") };
+        const h = $("holdings").value.trim(); if (h) credentials.initial_holdings = JSON.parse(h);
+      } else if (!$("credFields").classList.contains("hidden")) {
+        credentials = JSON.parse($("creds").value || "{}");
+      }
+    } catch (e) { showMsg("connMsg", "bad", "Invalid JSON: " + e.message); return; }
+    const r = await api("POST", "/broker-connections", { broker, credentials });
+    if (r.status === 200 && r.data.login_url) {
+      connectionId = r.data.connection_id; store.set("connectionId", connectionId);
+      window.open(r.data.login_url, "_blank", "noopener");
+      showMsg("connMsg", "ok", "Finish the login in the broker window, then click Check status.");
+      $("connInfo").innerHTML = `Pending login · <button id="checkConn">Check status</button>`;
+      $("checkConn").onclick = refreshConnection;
+      return;
+    }
+    if (r.status !== 201) { showMsg("connMsg", "bad", errorText(r.data)); return; }
+    connectionId = r.data.connection_id; store.set("connectionId", connectionId);
+    refreshConnection();
+  }
+  async function refreshConnection() {
+    const r = await api("GET", `/broker-connections/${connectionId}`);
+    if (r.status !== 200) { $("connInfo").textContent = "Not connected"; return; }
+    $("connInfo").innerHTML = `<span class="pill s-${esc(r.data.status === "ACTIVE" ? "FILLED" : "FAILED")}">${esc(r.data.status)}</span> ${esc(r.data.broker)} · ${esc(r.data.broker_user_id || "")} · <span class="mono">${esc(connectionId)}</span>`;
+    if (r.data.status !== "ACTIVE") return;
+    const h = await api("GET", `/broker-connections/${connectionId}/holdings`);
+    $("holdingsView").textContent = h.status === 200
+      ? "Holdings: " + (h.data.length ? h.data.map((x) => `${x.symbol} ${x.quantity}`).join(" · ") : "none")
+      : "";
+  }
+
+  // ---------- step 2
+  function setMode(m) {
+    mode = m;
+    $("modeInitial").setAttribute("aria-pressed", m === "INITIAL");
+    $("modeRebal").setAttribute("aria-pressed", m === "REBALANCE");
+    $("initialFields").classList.toggle("hidden", m !== "INITIAL");
+    $("rebalFields").classList.toggle("hidden", m !== "REBALANCE");
+  }
+  function parseLines(text, key) {
+    return text.split(/\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#")).map((l) => {
+      const [sym, n] = l.split(/[,\s]+/);
+      const num = Number(n);
+      if (!sym || !Number.isInteger(num)) throw new Error(`Cannot read line "${l}" (expected SYMBOL, NUMBER)`);
+      return { symbol: sym.toUpperCase(), [key]: num };
+    });
+  }
+  function buildRequest() {
+    const base = { connection_id: connectionId, mode };
+    if ($("useSink").checked) base.callback_url = location.origin + "/dev/webhook-sink";  // dev servers only
+    if (mode === "INITIAL") return { ...base, target: parseLines($("target").value, "quantity") };
+    return { ...base, sell: parseLines($("sell").value, "quantity"), buy: parseLines($("buy").value, "quantity"),
+             adjust: parseLines($("adjust").value, "delta") };
+  }
+  function onCsv(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const rows = String(reader.result).split(/\r?\n/).map((l) => l.split(",").map((c) => c.trim())).filter((r) => r.length >= 3);
+      const header = rows[0].map((h) => h.toLowerCase());
+      const body = header.includes("action") ? rows.slice(1) : rows;
+      const bucket = { BUY: [], SELL: [], ADJUST: [] };
+      for (const [action, sym, qty] of body) { (bucket[action.toUpperCase()] || bucket.BUY).push(`${sym}, ${qty}`); }
+      if (bucket.SELL.length || bucket.ADJUST.length) {
+        setMode("REBALANCE"); $("sell").value = bucket.SELL.join("\n"); $("buy").value = bucket.BUY.join("\n"); $("adjust").value = bucket.ADJUST.join("\n");
+      } else { setMode("INITIAL"); $("target").value = bucket.BUY.join("\n"); }
+      showMsg("planMsg", "ok", `Loaded ${body.length} rows from ${file.name}`);
+    };
+    reader.readAsText(file);
+  }
+  async function preview() {
+    if (!connectionId) { showMsg("planMsg", "bad", "Connect a broker first."); return; }
+    let req; try { req = buildRequest(); } catch (e) { showMsg("planMsg", "bad", e.message); return; }
+    const r = await api("POST", "/executions/preview", req);
+    if (r.status !== 200) { showMsg("planMsg", "bad", errorText(r.data)); return; }
+    if (!r.data.valid) { showMsg("planMsg", "bad", r.data.errors.map((e) => `• ${e.symbol ? e.symbol + ": " : ""}${e.message}`).join("\n")); return; }
+    showMsg("planMsg", "ok", "Plan (sells run before buys):\n" + r.data.orders.map((o) => `  ${o.seq}. phase ${o.phase}  ${o.side.padEnd(4)} ${o.symbol} × ${o.quantity}`).join("\n"));
+  }
+  async function execute() {
+    if (!connectionId) { showMsg("planMsg", "bad", "Connect a broker first."); return; }
+    let req; try { req = buildRequest(); } catch (e) { showMsg("planMsg", "bad", e.message); return; }
+    // One Idempotency-Key per intent: an identical retry (double click, network blip) reuses it.
+    const fingerprint = JSON.stringify(req);
+    if (fingerprint !== idemFor) { idemKey = crypto.randomUUID(); idemFor = fingerprint; }
+    $("idemInfo").textContent = `Idempotency-Key ${idemKey.slice(0, 8)}…`;
+    $("executeBtn").disabled = true;
+    try {
+      const r = await api("POST", "/executions", req, { "Idempotency-Key": idemKey });
+      if (r.status !== 202 && r.status !== 200) { showMsg("planMsg", "bad", errorText(r.data)); return; }
+      showMsg("planMsg", "ok", r.status === 200 ? "Already submitted — showing the existing execution (idempotent replay)." : "Accepted. Executing…");
+      executionId = r.data.execution_id; render(r.data); startPolling();
+    } finally { $("executeBtn").disabled = false; }
+  }
+
+  // ---------- step 3
+  function startPolling() {
+    clearTimeout(pollTimer);
+    const tick = async () => {
+      const r = await api("GET", `/executions/${executionId}`);
+      if (r.status === 200) render(r.data);
+      const running = r.status === 200 && (["ACCEPTED", "RUNNING"].includes(r.data.status) || r.data.notification.status === "PENDING");
+      if (running) pollTimer = setTimeout(tick, 800); else refreshConnection();
+    };
+    tick();
+  }
+  function render(ex) {
+    const n = ex.notification || {};
+    $("execHead").innerHTML = `Execution <span class="mono">${esc(ex.execution_id)}</span> · <span class="pill s-${esc(ex.status)}">${esc(ex.status)}</span>` +
+      ` · notification <span class="pill s-${esc(n.status)}">${esc(n.status)}</span>${ex.error_code ? ` · <span class="s-FAILED">${esc(ex.error_code)}</span>` : ""}`;
+    const s = ex.summary || {};
+    $("summary").innerHTML = ex.summary ? ["total", "filled", "partially_filled", "open", "rejected", "cancelled", "failed", "unknown", "skipped"]
+      .filter((k) => s[k]).map((k) => `<span>${esc(k.replace("_", " "))}: <b>${esc(s[k])}</b></span>`).join("") : "";
+    $("orders").classList.remove("hidden");
+    $("orders").querySelector("tbody").innerHTML = ex.orders.map((o) => `<tr>
+      <td>${esc(o.seq)}</td><td>${o.phase === 1 ? "SELL" : "BUY"}</td><td>${esc(o.side)}</td><td><b>${esc(o.symbol)}</b></td>
+      <td>${esc(o.quantity)}</td><td>${esc(o.filled_quantity)}</td><td>${esc(o.average_price ?? "")}</td>
+      <td><span class="pill s-${esc(o.status)}">${esc(o.status)}</span></td><td>${esc(o.attempts)}</td>
+      <td class="mono">${esc(o.broker_order_id ?? "")}</td><td class="reason">${esc([o.error_code, o.error_message].filter(Boolean).join(" — "))}</td></tr>`).join("");
+    const done = !["ACCEPTED", "RUNNING"].includes(ex.status);
+    $("reconcileBtn").disabled = !done; $("notifyBtn").disabled = !done;
+  }
+  async function reconcile() {
+    const r = await api("POST", `/executions/${executionId}/reconcile`);
+    if (r.status === 200) render(r.data); else showMsg("planMsg", "bad", errorText(r.data));
+  }
+  async function resend() {
+    const r = await api("POST", `/executions/${executionId}/notify`);
+    if (r.status === 200) startPolling(); else showMsg("planMsg", "bad", errorText(r.data));
+  }
+
+  $("broker").onchange = brokerChanged;
+  $("connectBtn").onclick = connect;
+  $("modeInitial").onclick = () => setMode("INITIAL");
+  $("modeRebal").onclick = () => setMode("REBALANCE");
+  $("csv").onchange = (e) => e.target.files[0] && onCsv(e.target.files[0]);
+  $("previewBtn").onclick = preview;
+  $("executeBtn").onclick = execute;
+  $("reconcileBtn").onclick = reconcile;
+  $("notifyBtn").onclick = resend;
+  $("apiKey").onchange = () => { store.set("apiKey", $("apiKey").value.trim()); loadBrokers(); };
+  loadBrokers();
+})();
+</script>
+</body>
+</html>
