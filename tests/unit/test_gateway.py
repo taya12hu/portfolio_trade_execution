@@ -89,7 +89,7 @@ class FakeAdapter(BrokerAdapter):
 
 
 def gw(adapter, **settings_kw):
-    settings = Settings(app_env="test", retry_backoff_base_s=0.001, broker_max_retries=3, **settings_kw)
+    settings = Settings(_env_file=None, app_env="test", retry_backoff_base_s=0.001, broker_max_retries=3, **settings_kw)
     events = {"refreshed": 0, "expired": 0}
 
     async def on_refreshed(_s):

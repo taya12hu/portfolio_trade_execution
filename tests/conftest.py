@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -11,6 +12,21 @@ from cryptography.fernet import Fernet
 from app.core.config import Settings
 from app.main import create_app
 
+def _test_database_url() -> str | None:
+    """TEST_DATABASE_URL from the environment, else from .env (e.g. a Supabase test project)."""
+    url = os.environ.get("TEST_DATABASE_URL")
+    if url is None:
+        from dotenv import dotenv_values
+
+        url = dotenv_values(Path(__file__).resolve().parents[1] / ".env").get("TEST_DATABASE_URL")
+    return url if url and "<" not in url else None
+
+
+# A remote test database (e.g. Supabase, ~150 ms per query) makes every commit slow, so give
+# executions far longer to finish than on local SQLite.
+REMOTE_DB = _test_database_url() is not None
+WAIT_S = 180 if REMOTE_DB else 15
+
 API_KEY = "test-key"
 OTHER_API_KEY = "other-key"
 
@@ -18,9 +34,10 @@ OTHER_API_KEY = "other-key"
 @pytest.fixture
 def settings(tmp_path) -> Settings:
     return Settings(
+        _env_file=None,  # tests never read the developer's .env
         app_env="test",
         # CI also runs the engine/API tests against Postgres via TEST_DATABASE_URL.
-        database_url=os.environ.get("TEST_DATABASE_URL") or f"sqlite+aiosqlite:///{(tmp_path / 'test.db').as_posix()}",
+        database_url=_test_database_url() or f"sqlite+aiosqlite:///{(tmp_path / 'test.db').as_posix()}",
         api_keys=f"{API_KEY}:owner-a,{OTHER_API_KEY}:owner-b",
         token_encryption_key=Fernet.generate_key().decode(),
         webhook_secret="whsec_test",
@@ -58,7 +75,7 @@ async def app(settings):
         loopback = httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
         container.notifications._http = loopback
         yield app
-        await container.tasks.wait_all(timeout=10)
+        await container.tasks.wait_all(timeout=WAIT_S)
         await loopback.aclose()
 
 
@@ -108,7 +125,7 @@ async def run_execution(app, client: httpx.AsyncClient, payload: dict[str, Any],
 
 
 async def wait_done(app, client: httpx.AsyncClient, execution_id: str) -> dict:
-    await app.state.container.tasks.wait(execution_id, timeout=15)
+    await app.state.container.tasks.wait(execution_id, timeout=WAIT_S)
     r = await client.get(f"/executions/{execution_id}")
     assert r.status_code == 200, r.text
     return r.json()

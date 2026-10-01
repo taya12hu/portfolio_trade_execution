@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from tests.conftest import OTHER_API_KEY, connect_mock, post_execution, wait_done
+from tests.conftest import OTHER_API_KEY, WAIT_S, connect_mock, post_execution, wait_done
 
 
 def initial(conn, *symbols):
@@ -75,7 +75,7 @@ async def test_concurrent_requests_with_different_keys_only_one_wins(app, client
     codes = sorted(r.status_code for r in responses)
     assert codes == [202, 409, 409, 409, 409], [r.text for r in responses]
     assert {r.json()["error"]["code"] for r in responses if r.status_code == 409} == {"EXECUTION_IN_PROGRESS"}
-    await container.tasks.wait_all(10)
+    await container.tasks.wait_all(WAIT_S)
     assert container.mock_exchange.accounts["DEMO1"].place_calls == 1
 
 
@@ -87,4 +87,4 @@ async def test_idempotency_keys_are_scoped_per_owner(app, client):
     assert r1.status_code == r2.status_code == 202
     assert r1.json()["execution_id"] != r2.json()["execution_id"]
     await wait_done(app, client, r1.json()["execution_id"])
-    await app.state.container.tasks.wait_all(10)
+    await app.state.container.tasks.wait_all(WAIT_S)

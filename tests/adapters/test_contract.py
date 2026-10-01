@@ -35,7 +35,7 @@ async def http():
 
 
 def adapter_for(spec: BrokerSpec, http: httpx.AsyncClient, **settings_kw):
-    settings = Settings(app_env="test", **{**spec.settings, **settings_kw})
+    settings = Settings(_env_file=None, app_env="test", **{**spec.settings, **settings_kw})
     return create_adapter(spec.name, AdapterContext(settings=settings, http=http), session=spec.session)
 
 
